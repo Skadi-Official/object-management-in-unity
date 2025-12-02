@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
-
+using UnityEngine.SceneManagement;
 namespace ObjectManagement
 {
     /// <summary>
@@ -27,6 +27,7 @@ namespace ObjectManagement
         private float destructionProgress;
         void Awake () {
             shapes = new List<Shape>();
+            StartCoroutine(LoadLevel());
         }
         private void Update()
         {
@@ -144,6 +145,20 @@ namespace ObjectManagement
             int lastIndex = shapes.Count - 1;
             shapes[index] = shapes[lastIndex];
             shapes.RemoveAt(lastIndex);
+        }
+
+        #endregion
+
+        #region LoadLevel
+
+        private IEnumerator LoadLevel()
+        {
+            // 这里的第二个参数是为了声明加载的场景不是替换而是加在当前已经打开的场景
+            SceneManager.LoadScene("Level 1", LoadSceneMode.Additive);
+            // 因为 LoadScene 并不是同步完成的，场景在 下一帧才真正加载完毕，所以立即调用 SetActiveScene 会失败。
+            yield return null;
+            // 并且我们还要切换当前的ActiveScene
+            SceneManager.SetActiveScene(SceneManager.GetSceneByName("Level 1"));
         }
 
         #endregion
