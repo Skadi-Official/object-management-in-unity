@@ -100,7 +100,7 @@ namespace ObjectManagement
             {
                 int shapeID = version > 0 ? reader.ReadInt() : 0;
                 int materialID = version > 0 ? reader.ReadInt() : 0;
-                Debug.Log($"{i}: {shapeID}");
+                //Debug.Log($"{i}: {shapeID}");
                 Shape instance = shapeFactory.Get(shapeID, materialID);
                 instance.Load(reader);
                 shapes.Add(instance);
