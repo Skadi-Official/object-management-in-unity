@@ -15,12 +15,16 @@ namespace ObjectManagement
         const int saveVersion = 1; // 存档版本标记
         public ShapeFactory shapeFactory;
         public PersistentStorage storage;
-        public Transform prefabParent;
         public KeyCode createKey = KeyCode.C;
         public KeyCode newGameKey = KeyCode.N;
         public KeyCode saveKey = KeyCode.S;
         public KeyCode loadKey = KeyCode.L;
+        public KeyCode destroyKey = KeyCode.X;
         public List<Shape> shapes = new List<Shape>();
+        public float CreationSpeed { get; set; }
+        public float DestructionSpeed { get; set; }
+        private float creationProgress;
+        private float destructionProgress;
         void Awake () {
             shapes = new List<Shape>();
         }
@@ -40,6 +44,24 @@ namespace ObjectManagement
             else if (Input.GetKeyDown(loadKey)) {
                 BeginNewGame();
                 storage.Load(this);
+            }
+            else if (Input.GetKeyDown(destroyKey))
+            {
+                DestroyShape();
+            }
+            
+            creationProgress += Time.deltaTime * CreationSpeed;
+            destructionProgress += Time.deltaTime * DestructionSpeed;
+            while (creationProgress >= 1f)
+            {
+                creationProgress -= 1f;
+                CreateShape();
+            }
+
+            while (destructionProgress >= 1f)
+            {
+                destructionProgress -= 1f;
+                DestroyShape();
             }
         }
 
@@ -64,7 +86,8 @@ namespace ObjectManagement
 
             foreach (var obj in shapes)
             {
-                Destroy(obj.gameObject);
+                //Destroy(obj.gameObject);
+                shapeFactory.Reclaim(obj);
             }
             shapes.Clear();
         }
@@ -84,9 +107,9 @@ namespace ObjectManagement
         }
 
         public override void Load (GameDataReader reader) {
-            Debug.Log("public override void Load (GameDataReader reader)");
+//            Debug.Log("public override void Load (GameDataReader reader)");
             int version = reader.Version;
-            Debug.Log("version = " + version);
+//            Debug.Log("version = " + version);
             if (version > saveVersion) {
                 Debug.LogError("Unsupported future save version " + version);
                 return;
@@ -106,6 +129,21 @@ namespace ObjectManagement
                 shapes.Add(instance);
             }
             Debug.Log("加载完成");
+        }
+
+        #endregion
+
+        #region DestroyShape
+
+        private void DestroyShape()
+        {
+            if (shapes.Count == 0) return;
+            int index = Random.Range(0, shapes.Count);
+            //Destroy(shapes[index].gameObject);
+            shapeFactory.Reclaim(shapes[index]);
+            int lastIndex = shapes.Count - 1;
+            shapes[index] = shapes[lastIndex];
+            shapes.RemoveAt(lastIndex);
         }
 
         #endregion
