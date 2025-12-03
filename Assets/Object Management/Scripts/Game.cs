@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
@@ -12,7 +13,7 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 1; // 存档版本标记
+        const int saveVersion = 2; // 存档版本标记
         public ShapeFactory shapeFactory;
         public PersistentStorage storage;
         public KeyCode createKey = KeyCode.C;
@@ -23,34 +24,36 @@ namespace ObjectManagement
         public List<Shape> shapes = new List<Shape>();
         public float CreationSpeed { get; set; }
         public float DestructionSpeed { get; set; }
-        private float creationProgress;
-        private float destructionProgress;
-        void Awake () {
+        public int levelCount;              // 总共的关卡数量
+        private float creationProgress;     // 创建形状进度，满1就会执行一次创建
+        private float destructionProgress;  // 摧毁形状进度，满1就会执行一次销毁
+        private int loadedLevelBuildIndex;  // 当前加载场景的index
+        private void Start () {
             shapes = new List<Shape>();
-            StartCoroutine(LoadLevel());
+
+            if (Application.isEditor)
+            {
+                // 防止重复加载场景，如果已经加载了，直接将其激活并返回
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene loadedScene = SceneManager.GetSceneAt(i);
+                    if (loadedScene.name.Contains("Level "))
+                    {
+                        SceneManager.SetActiveScene(loadedScene);
+                        loadedLevelBuildIndex = loadedScene.buildIndex;
+                        return;
+                    }
+                }
+            }
+            
+            StartCoroutine(LoadLevel(1));
         }
         private void Update()
         {
-            if (Input.GetKeyDown(createKey))
-            {
-                CreateShape();
-            }
-            else if (Input.GetKeyDown(newGameKey))
-            {
-                BeginNewGame();
-            }
-            else if (Input.GetKeyDown(saveKey)) {
-                storage.Save(this, saveVersion);
-            }
-            else if (Input.GetKeyDown(loadKey)) {
-                BeginNewGame();
-                storage.Load(this);
-            }
-            else if (Input.GetKeyDown(destroyKey))
-            {
-                DestroyShape();
-            }
-            
+            HandleInput();
+
+            #region CreateAndDestroyShape
+
             creationProgress += Time.deltaTime * CreationSpeed;
             destructionProgress += Time.deltaTime * DestructionSpeed;
             while (creationProgress >= 1f)
@@ -64,6 +67,9 @@ namespace ObjectManagement
                 destructionProgress -= 1f;
                 DestroyShape();
             }
+
+            #endregion
+            
         }
 
         void CreateShape () {
@@ -97,6 +103,7 @@ namespace ObjectManagement
 
         public override void Save(GameDataWriter writer) {
             writer.Write(shapes.Count);
+            writer.Write(loadedLevelBuildIndex);
             for (int i = 0; i < shapes.Count; i++)
             {
                 // 实际写入形状编号到存档文件里面
@@ -118,7 +125,7 @@ namespace ObjectManagement
 
             // 这样，当版本号 ≤ 0 时，我们就知道这是旧文件，那我们第一次读的version数据实际上就是count
             int count = version <= 0 ? -version : reader.ReadInt();
-            
+            StartCoroutine(LoadLevel(version < 2 ? 1 : reader.ReadInt()));
             // 正式开始创建时也要先读取形状数据，如果版本号大于0，说明我们写入过形状数据，要读取一次，否则直接设置为0
             for (int i = 0; i < count; i++)
             {
@@ -151,14 +158,61 @@ namespace ObjectManagement
 
         #region LoadLevel
 
-        private IEnumerator LoadLevel()
+        private IEnumerator LoadLevel(int levelBuildIndex)
         {
+            // 这里的异步加载需要消耗时间并且不是阻塞式的，update依然会执行，我们要防止用户在加载完成之前的操作被读取并处理
+            enabled = false;
+
+            if (loadedLevelBuildIndex > 0)
+            {
+                yield return SceneManager.UnloadSceneAsync(loadedLevelBuildIndex);
+            }
+            
             // 这里的第二个参数是为了声明加载的场景不是替换而是加在当前已经打开的场景
-            SceneManager.LoadScene("Level 1", LoadSceneMode.Additive);
-            // 因为 LoadScene 并不是同步完成的，场景在 下一帧才真正加载完毕，所以立即调用 SetActiveScene 会失败。
-            yield return null;
+            yield return SceneManager.LoadSceneAsync(levelBuildIndex, LoadSceneMode.Additive);
             // 并且我们还要切换当前的ActiveScene
-            SceneManager.SetActiveScene(SceneManager.GetSceneByName("Level 1"));
+            SceneManager.SetActiveScene(SceneManager.GetSceneByBuildIndex(levelBuildIndex));
+            loadedLevelBuildIndex = levelBuildIndex;
+            enabled = true;
+        }
+
+        #endregion
+
+        #region HandleInput
+
+        private void HandleInput()
+        {
+            if (Input.GetKeyDown(createKey))
+            {
+                CreateShape();
+            }
+            else if (Input.GetKeyDown(newGameKey))
+            {
+                BeginNewGame();
+            }
+            else if (Input.GetKeyDown(saveKey)) {
+                storage.Save(this, saveVersion);
+            }
+            else if (Input.GetKeyDown(loadKey)) {
+                BeginNewGame();
+                storage.Load(this);
+            }
+            else if (Input.GetKeyDown(destroyKey))
+            {
+                DestroyShape();
+            }
+            else
+            {
+                for (int i = 1; i <= levelCount; i++)
+                {
+                    if (Input.GetKeyDown(KeyCode.Alpha0 + i))
+                    {
+                        BeginNewGame();
+                        StartCoroutine(LoadLevel(i));
+                        return;
+                    }
+                }
+            }
         }
 
         #endregion
