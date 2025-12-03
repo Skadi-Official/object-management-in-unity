@@ -14,21 +14,32 @@ namespace ObjectManagement
     public class Game : PersistableObject 
     {
         const int saveVersion = 2; // 存档版本标记
-        public ShapeFactory shapeFactory;
-        public PersistentStorage storage;
-        public KeyCode createKey = KeyCode.C;
-        public KeyCode newGameKey = KeyCode.N;
-        public KeyCode saveKey = KeyCode.S;
-        public KeyCode loadKey = KeyCode.L;
-        public KeyCode destroyKey = KeyCode.X;
-        public List<Shape> shapes = new List<Shape>();
+        public static Game Instance { get; private set; }
+        public SpawnZone SpawnZoneOfLevel { get; set; }         // 生成区域，属于关卡不属于通用场景
         public float CreationSpeed { get; set; }
         public float DestructionSpeed { get; set; }
-        public int levelCount;              // 总共的关卡数量
+        [SerializeField]private ShapeFactory shapeFactory;
+        [SerializeField]private PersistentStorage storage;
+        [SerializeField]private KeyCode createKey = KeyCode.C;
+        [SerializeField]private KeyCode newGameKey = KeyCode.N;
+        [SerializeField]private KeyCode saveKey = KeyCode.S;
+        [SerializeField]private KeyCode loadKey = KeyCode.L;
+        [SerializeField]private KeyCode destroyKey = KeyCode.X;
+        [SerializeField]private List<Shape> shapes = new List<Shape>();
+        [SerializeField]private int levelCount;              // 总共的关卡数量
+        
         private float creationProgress;     // 创建形状进度，满1就会执行一次创建
         private float destructionProgress;  // 摧毁形状进度，满1就会执行一次销毁
         private int loadedLevelBuildIndex;  // 当前加载场景的index
+
+        private void OnEnable()
+        {
+            // 为了在重编译后恢复，我们可以在 OnEnable 方法中也设置这个属性。Unity 会在组件每次被启用时调用 OnEnable
+            Instance = this;
+        }
+
         private void Start () {
+            Instance = this;
             shapes = new List<Shape>();
 
             if (Application.isEditor)
@@ -72,20 +83,7 @@ namespace ObjectManagement
             
         }
 
-        void CreateShape () {
-            Shape instance = shapeFactory.GetRandom();
-            Transform t = instance.transform;
-            t.localPosition = Random.insideUnitSphere * 5f;
-            t.localRotation = Random.rotation;
-            t.localScale = Vector3.one * Random.Range(0.1f, 1f);
-            instance.SetColor(Random.ColorHSV(
-                hueMin: 0f, hueMax: 1f,
-                saturationMin: 0.5f, saturationMax: 1f,
-                valueMin: 0.25f, valueMax: 1f,
-                alphaMin: 1f, alphaMax: 1f
-            ));
-            shapes.Add(instance);
-        }
+        
 
         private void BeginNewGame()
         {
@@ -99,7 +97,7 @@ namespace ObjectManagement
             shapes.Clear();
         }
 
-        #region SaveAndLoad
+        #region SaveAndLoadData
 
         public override void Save(GameDataWriter writer) {
             writer.Write(shapes.Count);
@@ -141,6 +139,25 @@ namespace ObjectManagement
 
         #endregion
 
+        #region CreateShape
+
+        void CreateShape () {
+            Shape instance = shapeFactory.GetRandom();
+            Transform t = instance.transform;
+            t.localPosition = SpawnZoneOfLevel.SpawnPoint;
+            t.localRotation = Random.rotation;
+            t.localScale = Vector3.one * Random.Range(0.1f, 1f);
+            instance.SetColor(Random.ColorHSV(
+                hueMin: 0f, hueMax: 1f,
+                saturationMin: 0.5f, saturationMax: 1f,
+                valueMin: 0.25f, valueMax: 1f,
+                alphaMin: 1f, alphaMax: 1f
+            ));
+            shapes.Add(instance);
+        }
+
+        #endregion
+        
         #region DestroyShape
 
         private void DestroyShape()
