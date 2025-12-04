@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using Random = UnityEngine.Random;
 
 namespace ObjectManagement
 {
@@ -52,6 +53,16 @@ namespace ObjectManagement
             value.a = reader.ReadSingle();
             return value;
         }
+
+        /// <summary>
+        /// 从存档文件中读取随机数字符串并转换成Random.State类型
+        /// </summary>
+        /// <returns></returns>
+        public Random.State ReadRandomState()
+        {
+            return JsonUtility.FromJson<Random.State>(reader.ReadString());
+        }
+        
         #endregion
     }
 }

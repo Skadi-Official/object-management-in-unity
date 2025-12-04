@@ -47,6 +47,12 @@ namespace ObjectManagement
             writer.Write(color.b);
             writer.Write(color.a);
         }
+
+        public void Write(Random.State value)
+        {
+            Debug.Log($"Write::{JsonUtility.ToJson(value)}");
+            writer.Write(JsonUtility.ToJson(value));
+        }
         
         #endregion
     }

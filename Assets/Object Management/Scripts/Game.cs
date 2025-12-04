@@ -13,8 +13,8 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 2; // 存档版本标记
-        public static Game Instance { get; private set; }
+        const int saveVersion = 3; // 存档版本标记
+        //public static Game Instance { get; private set; } 由于我们把生成点全部解耦到了关卡自己，game只需要去获取，不需要关卡来设置game的生成点变量
         public SpawnZone SpawnZoneOfLevel { get; set; }         // 生成区域，属于关卡不属于通用场景
         public float CreationSpeed { get; set; }
         public float DestructionSpeed { get; set; }
@@ -27,19 +27,22 @@ namespace ObjectManagement
         [SerializeField]private KeyCode destroyKey = KeyCode.X;
         [SerializeField]private List<Shape> shapes = new List<Shape>();
         [SerializeField]private int levelCount;              // 总共的关卡数量
+        [SerializeField] private bool reseedOnLoad; // 加载时是否重新设定随机种子
         
         private float creationProgress;     // 创建形状进度，满1就会执行一次创建
         private float destructionProgress;  // 摧毁形状进度，满1就会执行一次销毁
         private int loadedLevelBuildIndex;  // 当前加载场景的index
+        private Random.State mainRandomState;
 
-        private void OnEnable()
-        {
-            // 为了在重编译后恢复，我们可以在 OnEnable 方法中也设置这个属性。Unity 会在组件每次被启用时调用 OnEnable
-            Instance = this;
-        }
+        // private void OnEnable()
+        // {
+        //     // 为了在重编译后恢复，我们可以在 OnEnable 方法中也设置这个属性。Unity 会在组件每次被启用时调用 OnEnable
+        //     Instance = this;
+        // }
 
         private void Start () {
-            Instance = this;
+            mainRandomState = Random.state; // 这里我们保存一次随机序列，此时我们对随机序列没有做任何处理，将这个结果作为主随机序列
+            Debug.Log($"Start::{JsonUtility.ToJson(mainRandomState)}");
             shapes = new List<Shape>();
 
             if (Application.isEditor)
@@ -56,7 +59,7 @@ namespace ObjectManagement
                     }
                 }
             }
-            
+            BeginNewGame();
             StartCoroutine(LoadLevel(1));
         }
         private void Update()
@@ -87,6 +90,16 @@ namespace ObjectManagement
 
         private void BeginNewGame()
         {
+            // 1. 切到主随机流
+            Random.state = mainRandomState;
+            // 2. 主随机流生成一个新种子
+            int seed = Random.Range(0, int.MaxValue);
+            // 3. 推进主随机流
+            mainRandomState = Random.state;
+            Debug.Log($"BeginNewGame::{JsonUtility.ToJson(mainRandomState)}");
+            // 4. 用新种子初始化本局游戏的随机流
+            Random.InitState(seed);
+
             if (shapes == null) return;
 
             foreach (var obj in shapes)
@@ -101,6 +114,7 @@ namespace ObjectManagement
 
         public override void Save(GameDataWriter writer) {
             writer.Write(shapes.Count);
+            writer.Write(Random.state);
             writer.Write(loadedLevelBuildIndex);
             for (int i = 0; i < shapes.Count; i++)
             {
@@ -123,6 +137,17 @@ namespace ObjectManagement
 
             // 这样，当版本号 ≤ 0 时，我们就知道这是旧文件，那我们第一次读的version数据实际上就是count
             int count = version <= 0 ? -version : reader.ReadInt();
+
+            if (version >= 3)
+            {
+                Random.State state = reader.ReadRandomState();
+                Debug.Log($"Load::{JsonUtility.ToJson(Random.state)}");
+                if (!reseedOnLoad)
+                {
+                    Random.state = state;
+                }
+            }
+            
             StartCoroutine(LoadLevel(version < 2 ? 1 : reader.ReadInt()));
             // 正式开始创建时也要先读取形状数据，如果版本号大于0，说明我们写入过形状数据，要读取一次，否则直接设置为0
             for (int i = 0; i < count; i++)
@@ -144,7 +169,7 @@ namespace ObjectManagement
         void CreateShape () {
             Shape instance = shapeFactory.GetRandom();
             Transform t = instance.transform;
-            t.localPosition = SpawnZoneOfLevel.SpawnPoint;
+            t.localPosition = GameLevel.Current.SpawnPoint; // Game -> GameLevel -> SpawnZone
             t.localRotation = Random.rotation;
             t.localScale = Vector3.one * Random.Range(0.1f, 1f);
             instance.SetColor(Random.ColorHSV(
