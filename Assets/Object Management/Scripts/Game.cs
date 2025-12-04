@@ -116,6 +116,7 @@ namespace ObjectManagement
             writer.Write(shapes.Count);
             writer.Write(Random.state);
             writer.Write(loadedLevelBuildIndex);
+            GameLevel.Current.Save(writer);
             for (int i = 0; i < shapes.Count; i++)
             {
                 // 实际写入形状编号到存档文件里面
@@ -134,7 +135,13 @@ namespace ObjectManagement
                 Debug.LogError("Unsupported future save version " + version);
                 return;
             }
+            StartCoroutine(LoadGame(reader));
+            Debug.Log("加载完成");
+        }
 
+        IEnumerator LoadGame(GameDataReader reader)
+        {
+            int version = reader.Version;
             // 这样，当版本号 ≤ 0 时，我们就知道这是旧文件，那我们第一次读的version数据实际上就是count
             int count = version <= 0 ? -version : reader.ReadInt();
 
@@ -148,7 +155,11 @@ namespace ObjectManagement
                 }
             }
             
-            StartCoroutine(LoadLevel(version < 2 ? 1 : reader.ReadInt()));
+            yield return LoadLevel(version < 2 ? 1 : reader.ReadInt());
+            if (version >= 3)
+            {
+                GameLevel.Current.Load(reader);
+            }
             // 正式开始创建时也要先读取形状数据，如果版本号大于0，说明我们写入过形状数据，要读取一次，否则直接设置为0
             for (int i = 0; i < count; i++)
             {
@@ -159,9 +170,8 @@ namespace ObjectManagement
                 instance.Load(reader);
                 shapes.Add(instance);
             }
-            Debug.Log("加载完成");
         }
-
+        
         #endregion
 
         #region CreateShape
@@ -200,6 +210,11 @@ namespace ObjectManagement
 
         #region LoadLevel
 
+        /// <summary>
+        /// 加载指定的场景并添加到当前场景
+        /// </summary>
+        /// <param name="levelBuildIndex">场景在build时的序号</param>
+        /// <returns></returns>
         private IEnumerator LoadLevel(int levelBuildIndex)
         {
             // 这里的异步加载需要消耗时间并且不是阻塞式的，update依然会执行，我们要防止用户在加载完成之前的操作被读取并处理
@@ -231,6 +246,7 @@ namespace ObjectManagement
             else if (Input.GetKeyDown(newGameKey))
             {
                 BeginNewGame();
+                StartCoroutine(LoadLevel(loadedLevelBuildIndex));
             }
             else if (Input.GetKeyDown(saveKey)) {
                 storage.Save(this, saveVersion);

@@ -21,12 +21,12 @@ namespace ObjectManagement
     public class PersistentStorage : MonoBehaviour
     {
         // 存档文件在本地磁盘上的完整路径
-        private string path;
+        private string savePath;
 
         private void Awake()
         {
             // Application.persistentDataPath 是 Unity 提供的跨平台安全存储目录
-            path = Path.Combine(Application.persistentDataPath, "saveFile");
+            savePath = Path.Combine(Application.persistentDataPath, "saveFile");
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace ObjectManagement
         public void Save(PersistableObject o, int version)
         {
             // FileMode.Create：若文件不存在则创建，若已存在则直接覆盖
-            using var writer = new BinaryWriter(File.Open(path, FileMode.Create));
+            using var writer = new BinaryWriter(File.Open(savePath, FileMode.Create));
 
             // 写入“负数版本号”作为存档头，用于区分数据版本
             writer.Write(-version);
@@ -52,15 +52,9 @@ namespace ObjectManagement
         /// <param name="o">要恢复数据的对象</param>
         public void Load(PersistableObject o)
         {
-            // Debug.Log("public void Load(PersistableObject o)");
-
-            using var reader = new BinaryReader(File.Open(path, FileMode.Open));
-
-            // 读取存档版本号（存的是负数，这里转回正数）
-            int version = -reader.ReadInt32();
-
-            // 将读取器和版本号一起交给对象自己恢复数据
-            o.Load(new GameDataReader(reader, version));
+            byte[] data = File.ReadAllBytes(savePath);
+            var reader = new BinaryReader(new MemoryStream(data));
+            o.Load(new GameDataReader(reader, -reader.ReadInt32()));
         }
     }
 }

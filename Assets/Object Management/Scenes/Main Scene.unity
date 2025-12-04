@@ -1098,6 +1098,7 @@ MonoBehaviour:
   destroyKey: 120
   shapes: []
   levelCount: 3
+  reseedOnLoad: 0
 --- !u!4 &1364196932
 Transform:
   m_ObjectHideFlags: 0
