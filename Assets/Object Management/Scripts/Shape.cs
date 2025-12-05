@@ -19,6 +19,8 @@ namespace ObjectManagement
         static MaterialPropertyBlock sharedPropertyBlock;
 
         public int MaterialID { get;private set; }
+        public Vector3 AngularVelocity { get; set; }
+        public Vector3 Velocity { get; set; }
         public int ShapeID
         {
             get => shapeID;
@@ -41,6 +43,13 @@ namespace ObjectManagement
         private void Awake()
         {
             meshRenderer = GetComponent<MeshRenderer>();
+        }
+
+        public void GameUpdate()
+        {
+            // 这里的Rotate，实际上是把Vector3的三个数据当作在xyz轴上分别旋转的角度应用到物体上
+            transform.Rotate(AngularVelocity * Time.deltaTime);
+            transform.localPosition += Velocity * Time.deltaTime;
         }
 
         public void SetMaterial(Material material, int materialID)
@@ -79,12 +88,14 @@ namespace ObjectManagement
         {
             base.Save(writer);
             writer.Write(color);
+            writer.Write(AngularVelocity);
         }
 
         public override void Load(GameDataReader reader)
         {
             base.Load(reader);
             SetColor(reader.Version > 0 ? reader.ReadColor() : Color.white);
+            AngularVelocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
         }
     }
 }

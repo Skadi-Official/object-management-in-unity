@@ -1089,6 +1089,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 552f8efc2b76bb34686416a5d09971de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  creationSpeedSlider: {fileID: 272685058}
+  destructionSpeedSlider: {fileID: 1776403001}
   shapeFactory: {fileID: 11400000, guid: 234ab098b3f32f545a5975756e009806, type: 2}
   storage: {fileID: 234420827}
   createKey: 99
@@ -1097,7 +1099,7 @@ MonoBehaviour:
   loadKey: 108
   destroyKey: 120
   shapes: []
-  levelCount: 3
+  levelCount: 4
   reseedOnLoad: 0
 --- !u!4 &1364196932
 Transform:

@@ -6,6 +6,8 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
 namespace ObjectManagement
 {
     /// <summary>
@@ -13,26 +15,28 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 3; // 存档版本标记
+        const int saveVersion = 4; // 存档版本标记
         //public static Game Instance { get; private set; } 由于我们把生成点全部解耦到了关卡自己，game只需要去获取，不需要关卡来设置game的生成点变量
         public SpawnZone SpawnZoneOfLevel { get; set; }         // 生成区域，属于关卡不属于通用场景
-        public float CreationSpeed { get; set; }
-        public float DestructionSpeed { get; set; }
-        [SerializeField]private ShapeFactory shapeFactory;
-        [SerializeField]private PersistentStorage storage;
-        [SerializeField]private KeyCode createKey = KeyCode.C;
-        [SerializeField]private KeyCode newGameKey = KeyCode.N;
-        [SerializeField]private KeyCode saveKey = KeyCode.S;
-        [SerializeField]private KeyCode loadKey = KeyCode.L;
-        [SerializeField]private KeyCode destroyKey = KeyCode.X;
-        [SerializeField]private List<Shape> shapes = new List<Shape>();
-        [SerializeField]private int levelCount;              // 总共的关卡数量
-        [SerializeField] private bool reseedOnLoad; // 加载时是否重新设定随机种子
+        public float CreationSpeed { get; set; }        // 创建速度
+        public float DestructionSpeed { get; set; }     // 销毁速度
+        [SerializeField]private Slider creationSpeedSlider;             // 控制创建速度的拖动条 
+        [SerializeField]private Slider destructionSpeedSlider;          // 控制销毁速度的拖动条
+        [SerializeField]private ShapeFactory shapeFactory;              // 创建物体的工厂类
+        [SerializeField]private PersistentStorage storage;              // 持久化存储管理器
+        [SerializeField]private KeyCode createKey = KeyCode.C;          // 创建物体的按键
+        [SerializeField]private KeyCode newGameKey = KeyCode.N;         // 新游戏按键
+        [SerializeField]private KeyCode saveKey = KeyCode.S;            // 保存按键
+        [SerializeField]private KeyCode loadKey = KeyCode.L;            // 加载按键
+        [SerializeField]private KeyCode destroyKey = KeyCode.X;         // 销毁物体按键
+        [SerializeField]private List<Shape> shapes = new List<Shape>(); // 场景中所有生成物体的引用
+        [SerializeField]private int levelCount;                         // 总共的关卡数量
+        [SerializeField] private bool reseedOnLoad;                     // 加载时是否重新设定随机种子
         
-        private float creationProgress;     // 创建形状进度，满1就会执行一次创建
-        private float destructionProgress;  // 摧毁形状进度，满1就会执行一次销毁
-        private int loadedLevelBuildIndex;  // 当前加载场景的index
-        private Random.State mainRandomState;
+        private float creationProgress;         // 创建形状进度，满1就会执行一次创建
+        private float destructionProgress;      // 销毁形状进度，满1就会执行一次销毁
+        private int loadedLevelBuildIndex;      // 当前加载场景的index
+        private Random.State mainRandomState;   // 主随机流状态
 
         // private void OnEnable()
         // {
@@ -65,7 +69,11 @@ namespace ObjectManagement
         private void Update()
         {
             HandleInput();
+            
+        }
 
+        private void FixedUpdate()
+        {
             #region CreateAndDestroyShape
 
             creationProgress += Time.deltaTime * CreationSpeed;
@@ -75,7 +83,6 @@ namespace ObjectManagement
                 creationProgress -= 1f;
                 CreateShape();
             }
-
             while (destructionProgress >= 1f)
             {
                 destructionProgress -= 1f;
@@ -83,10 +90,12 @@ namespace ObjectManagement
             }
 
             #endregion
-            
-        }
 
-        
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                shapes[i].GameUpdate();
+            }
+        }
 
         private void BeginNewGame()
         {
@@ -99,7 +108,11 @@ namespace ObjectManagement
             Debug.Log($"BeginNewGame::{JsonUtility.ToJson(mainRandomState)}");
             // 4. 用新种子初始化本局游戏的随机流
             Random.InitState(seed);
-
+            // 重置生成进度和速度
+            creationSpeedSlider.value = CreationSpeed = 0;
+            creationProgress = 0;
+            destructionSpeedSlider.value = DestructionSpeed = 0;
+            destructionProgress = 0;
             if (shapes == null) return;
 
             foreach (var obj in shapes)
@@ -115,6 +128,10 @@ namespace ObjectManagement
         public override void Save(GameDataWriter writer) {
             writer.Write(shapes.Count);
             writer.Write(Random.state);
+            writer.Write(CreationSpeed);
+            writer.Write(creationProgress);
+            writer.Write(DestructionSpeed);
+            writer.Write(destructionProgress);
             writer.Write(loadedLevelBuildIndex);
             GameLevel.Current.Save(writer);
             for (int i = 0; i < shapes.Count; i++)
@@ -153,6 +170,11 @@ namespace ObjectManagement
                 {
                     Random.state = state;
                 }
+                // 读取创建的速度和进度以及销毁的速度和进度
+                creationSpeedSlider.value = CreationSpeed = reader.ReadFloat();
+                destructionSpeedSlider.value = creationProgress = reader.ReadFloat();
+                DestructionSpeed = reader.ReadFloat();
+                destructionProgress = reader.ReadFloat();
             }
             
             yield return LoadLevel(version < 2 ? 1 : reader.ReadInt());
@@ -188,6 +210,7 @@ namespace ObjectManagement
                 valueMin: 0.25f, valueMax: 1f,
                 alphaMin: 1f, alphaMax: 1f
             ));
+            instance.AngularVelocity = Random.onUnitSphere * Random.Range(0f, 90f);
             shapes.Add(instance);
         }
 
@@ -276,5 +299,3 @@ namespace ObjectManagement
         #endregion
     }
 }
-
-

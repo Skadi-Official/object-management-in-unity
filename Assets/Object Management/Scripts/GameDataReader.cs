@@ -39,6 +39,15 @@ namespace ObjectManagement
         }
 
         /// <summary>
+        /// 读取浮点数据
+        /// </summary>
+        public float ReadFloat()
+        {
+            var value = reader.ReadSingle();
+            return value;
+        }
+
+        /// <summary>
         /// 读取 Vector3（按 x,y,z 顺序读取三个 float）
         /// </summary>
         public Vector3 ReadVector3()
