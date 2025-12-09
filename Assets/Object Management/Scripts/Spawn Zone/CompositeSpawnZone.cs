@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -7,12 +8,6 @@ namespace ObjectManagement
 {
     public class CompositeSpawnZone : SpawnZone
     {
-        [SerializeField]
-        SpawnZone[] spawnZones;
-
-        [SerializeField] private bool sequential; // 是否启用按顺序生成
-        private int nextSequentialIndex = 0;    
-
         public override Vector3 SpawnPoint
         {
             get
@@ -31,10 +26,10 @@ namespace ObjectManagement
             }
         }
 
-        private void Start()
-        {
-            Debug.Log($"{nextSequentialIndex}");
-        }
+        [SerializeField] private bool overrideConfig;
+        [SerializeField] private SpawnZone[] spawnZones;
+        [SerializeField] private bool sequential; // 是否启用按顺序生成
+        private int nextSequentialIndex = 0;
 
         #region 重写Save Load
         
@@ -49,6 +44,32 @@ namespace ObjectManagement
             nextSequentialIndex = reader.ReadInt();
         }
         
+        #endregion
+
+        #region 重写生成逻辑
+
+        public override void ConfigureSpawn(Shape shape)
+        {
+            if (overrideConfig)
+            {
+                base.ConfigureSpawn(shape);
+            }
+            else
+            {
+                int index = 0;
+                if (sequential)
+                {
+                    index = nextSequentialIndex++;
+                    if(nextSequentialIndex >= spawnZones.Length) nextSequentialIndex = 0;
+                }
+                else
+                {
+                    index = Random.Range(0, spawnZones.Length);
+                }
+                spawnZones[index].ConfigureSpawn(shape);
+            }
+        }
+
         #endregion
     }
 }

@@ -15,10 +15,7 @@ namespace ObjectManagement
     {
         // 当前激活的关卡实例（全局唯一）
         public static GameLevel Current { get; private set; }
-
-        // 对外暴露的生成点（由 SpawnZone 实际提供）
-        public Vector3 SpawnPoint => spawnZone.SpawnPoint;
-
+        
         // 关卡内部使用的生成区域
         [SerializeField] private SpawnZone spawnZone;
 
@@ -38,6 +35,15 @@ namespace ObjectManagement
             }
         }
 
+        /// <summary>
+        /// 调用当前激活的关卡内部使用的生成区域的生成逻辑
+        /// </summary>
+        /// <param name="shape"></param>
+        public void ConfigureSpawn(Shape shape)
+        {
+            spawnZone.ConfigureSpawn(shape);
+        }
+        
         #region 重写存读档
 
         // 对于关卡本身，我们需要记录关卡持有的所有需要被持久化保存的物体的数量，并调用这些物体自己的Save方法

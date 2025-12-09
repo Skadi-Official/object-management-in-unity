@@ -46,7 +46,7 @@ namespace ObjectManagement
 
         private void Start () {
             mainRandomState = Random.state; // 这里我们保存一次随机序列，此时我们对随机序列没有做任何处理，将这个结果作为主随机序列
-            Debug.Log($"Start::{JsonUtility.ToJson(mainRandomState)}");
+            //Debug.Log($"Start::{JsonUtility.ToJson(mainRandomState)}");
             shapes = new List<Shape>();
 
             if (Application.isEditor)
@@ -105,7 +105,7 @@ namespace ObjectManagement
             int seed = Random.Range(0, int.MaxValue);
             // 3. 推进主随机流
             mainRandomState = Random.state;
-            Debug.Log($"BeginNewGame::{JsonUtility.ToJson(mainRandomState)}");
+            //Debug.Log($"BeginNewGame::{JsonUtility.ToJson(mainRandomState)}");
             // 4. 用新种子初始化本局游戏的随机流
             Random.InitState(seed);
             // 重置生成进度和速度
@@ -200,17 +200,7 @@ namespace ObjectManagement
 
         void CreateShape () {
             Shape instance = shapeFactory.GetRandom();
-            Transform t = instance.transform;
-            t.localPosition = GameLevel.Current.SpawnPoint; // Game -> GameLevel -> SpawnZone
-            t.localRotation = Random.rotation;
-            t.localScale = Vector3.one * Random.Range(0.1f, 1f);
-            instance.SetColor(Random.ColorHSV(
-                hueMin: 0f, hueMax: 1f,
-                saturationMin: 0.5f, saturationMax: 1f,
-                valueMin: 0.25f, valueMax: 1f,
-                alphaMin: 1f, alphaMax: 1f
-            ));
-            instance.AngularVelocity = Random.onUnitSphere * Random.Range(0f, 90f);
+            GameLevel.Current.ConfigureSpawn(instance);
             shapes.Add(instance);
         }
 

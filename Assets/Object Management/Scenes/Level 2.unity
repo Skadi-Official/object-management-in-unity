@@ -166,6 +166,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a9c9029480c5b04284b57c4a2583585, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  spawnMovementDirection: 0
+  spawnSpeed:
+    min: 1.5
+    max: 2.5
   surfaceOnly: 1
 --- !u!1 &611823980
 GameObject:
@@ -197,6 +201,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spawnZone: {fileID: 185631717}
+  persistableObjects: []
 --- !u!4 &611823982
 Transform:
   m_ObjectHideFlags: 0

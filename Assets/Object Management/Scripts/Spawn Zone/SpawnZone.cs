@@ -1,4 +1,7 @@
+using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using Random = UnityEngine.Random;
 
 namespace ObjectManagement
 {
@@ -22,10 +25,52 @@ namespace ObjectManagement
     /// </summary>
     public abstract class SpawnZone : PersistableObject
     {
+        [Serializable]
+        public struct SpawnConfiguration
+        {
+            public enum SpawnMovementDirection
+            {
+                Forward,    // 往前
+                Upward,     // 往上
+                Outward,    // 往外
+                Random      // 随机
+            }
+            // 创建时物体被赋予的移动方向
+            public SpawnMovementDirection spawnMovementDirection;
+            // 创建时物体被赋予的速度
+            public FloatRange spawnSpeed;
+            // 创建时物体被赋予的角速度
+            public FloatRange angularSpeed;
+            // 创建时物体的缩放
+            public FloatRange scale;
+            // 创建时物体的颜色
+            public ColorRangeHSV color;
+        }
+        [SerializeField] private SpawnConfiguration spawnConfig;
         /// <summary>
         /// 对外暴露的生成点（由子类决定生成规则）
         /// 每次访问时，都可以返回一个新的随机位置或规则位置
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
+        public virtual void ConfigureSpawn(Shape shape)
+        {
+            Transform t = shape.transform;
+            t.localPosition = SpawnPoint; // Game -> GameLevel -> SpawnZone(abstract) -> SpawnZone(override)
+            t.localRotation = Random.rotation;
+            t.localScale = Vector3.one * spawnConfig.scale.RandomValueInRange;
+            shape.SetColor(spawnConfig.color.RandomInRange);
+            shape.AngularVelocity = Vector3.one * spawnConfig.angularSpeed.RandomValueInRange;
+            // switch表达式的写法，本质上和传统case break没有区别，下划线表示default值
+            Vector3 direction = spawnConfig.spawnMovementDirection switch
+            {
+                SpawnConfiguration.SpawnMovementDirection.Forward => transform.forward,
+                SpawnConfiguration.SpawnMovementDirection.Upward => transform.up,
+                SpawnConfiguration.SpawnMovementDirection.Outward =>
+                    (t.localPosition - transform.position).normalized,
+                SpawnConfiguration.SpawnMovementDirection.Random => Random.onUnitSphere,
+                _ => Vector3.forward
+            };
+            shape.Velocity = direction * spawnConfig.spawnSpeed.RandomValueInRange;
+        }
     }
 }

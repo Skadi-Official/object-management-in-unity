@@ -45,9 +45,12 @@ namespace ObjectManagement
             meshRenderer = GetComponent<MeshRenderer>();
         }
 
+        /// <summary>
+        /// 这个GameUpdate控制了所有Shape的更新逻辑
+        /// </summary>
         public void GameUpdate()
         {
-            // 这里的Rotate，实际上是把Vector3的三个数据当作在xyz轴上分别旋转的角度应用到物体上
+            // 这里的Rotate用法，实际上是把Vector3的三个数据当作在xyz轴上分别旋转的角度应用到物体上
             transform.Rotate(AngularVelocity * Time.deltaTime);
             transform.localPosition += Velocity * Time.deltaTime;
         }
@@ -89,6 +92,7 @@ namespace ObjectManagement
             base.Save(writer);
             writer.Write(color);
             writer.Write(AngularVelocity);
+            writer.Write(Velocity);
         }
 
         public override void Load(GameDataReader reader)
@@ -96,6 +100,7 @@ namespace ObjectManagement
             base.Load(reader);
             SetColor(reader.Version > 0 ? reader.ReadColor() : Color.white);
             AngularVelocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
+            Velocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
         }
     }
 }
