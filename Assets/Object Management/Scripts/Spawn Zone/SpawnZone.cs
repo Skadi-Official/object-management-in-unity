@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 namespace ObjectManagement
@@ -28,15 +29,17 @@ namespace ObjectManagement
         [Serializable]
         public struct SpawnConfiguration
         {
-            public enum SpawnMovementDirection
+            public enum MovementDirection
             {
                 Forward,    // 往前
                 Upward,     // 往上
                 Outward,    // 往外
                 Random      // 随机
             }
+            // 创建物体的工厂
+            public ShapeFactory[] factories;
             // 创建时物体被赋予的移动方向
-            public SpawnMovementDirection spawnMovementDirection;
+            public MovementDirection movementDirection;
             // 创建时物体被赋予的速度
             public FloatRange spawnSpeed;
             // 创建时物体被赋予的角速度
@@ -45,32 +48,51 @@ namespace ObjectManagement
             public FloatRange scale;
             // 创建时物体的颜色
             public ColorRangeHSV color;
+            // 是否使用统一的颜色
+            public bool uniformColor;
         }
         [SerializeField] private SpawnConfiguration spawnConfig;
         /// <summary>
-        /// 对外暴露的生成点（由子类决定生成规则）
-        /// 每次访问时，都可以返回一个新的随机位置或规则位置
+        /// 提供给子类重写的抽象生成点
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
-        public virtual void ConfigureSpawn(Shape shape)
+        /// <summary>
+        /// 可以被重写的具体生成逻辑，会返回一个Shape
+        /// </summary>
+        /// <returns></returns>
+        public virtual Shape ConfigureSpawn()
         {
+            int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
+            Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
             Transform t = shape.transform;
             t.localPosition = SpawnPoint; // Game -> GameLevel -> SpawnZone(abstract) -> SpawnZone(override)
             t.localRotation = Random.rotation;
             t.localScale = Vector3.one * spawnConfig.scale.RandomValueInRange;
-            shape.SetColor(spawnConfig.color.RandomInRange);
+            if (spawnConfig.uniformColor)
+            {
+                shape.SetColor(spawnConfig.color.RandomInRange);    
+            }
+            else
+            {
+                for (int i = 0; i < shape.ColorCount; i++)
+                {
+                    shape.SetColor(spawnConfig.color.RandomInRange, i);
+                }
+            }
+            
             shape.AngularVelocity = Vector3.one * spawnConfig.angularSpeed.RandomValueInRange;
             // switch表达式的写法，本质上和传统case break没有区别，下划线表示default值
-            Vector3 direction = spawnConfig.spawnMovementDirection switch
+            Vector3 direction = spawnConfig.movementDirection switch
             {
-                SpawnConfiguration.SpawnMovementDirection.Forward => transform.forward,
-                SpawnConfiguration.SpawnMovementDirection.Upward => transform.up,
-                SpawnConfiguration.SpawnMovementDirection.Outward =>
+                SpawnConfiguration.MovementDirection.Forward => transform.forward,
+                SpawnConfiguration.MovementDirection.Upward => transform.up,
+                SpawnConfiguration.MovementDirection.Outward =>
                     (t.localPosition - transform.position).normalized,
-                SpawnConfiguration.SpawnMovementDirection.Random => Random.onUnitSphere,
+                SpawnConfiguration.MovementDirection.Random => Random.onUnitSphere,
                 _ => Vector3.forward
             };
             shape.Velocity = direction * spawnConfig.spawnSpeed.RandomValueInRange;
+            return shape;
         }
     }
 }

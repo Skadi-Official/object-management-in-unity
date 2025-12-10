@@ -36,12 +36,12 @@ namespace ObjectManagement
         }
 
         /// <summary>
-        /// 调用当前激活的关卡内部使用的生成区域的生成逻辑
+        /// 调用当前激活的关卡内部使用的生成区域的生成逻辑，返回生成区域生成的形状
         /// </summary>
         /// <param name="shape"></param>
-        public void ConfigureSpawn(Shape shape)
+        public Shape ConfigureSpawn()
         {
-            spawnZone.ConfigureSpawn(shape);
+            return spawnZone.ConfigureSpawn();
         }
         
         #region 重写存读档

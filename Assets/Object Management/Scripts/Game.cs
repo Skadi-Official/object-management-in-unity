@@ -15,34 +15,42 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 4; // 存档版本标记
+        const int saveVersion = 5; // 存档版本标记
         //public static Game Instance { get; private set; } 由于我们把生成点全部解耦到了关卡自己，game只需要去获取，不需要关卡来设置game的生成点变量
-        public SpawnZone SpawnZoneOfLevel { get; set; }         // 生成区域，属于关卡不属于通用场景
         public float CreationSpeed { get; set; }        // 创建速度
         public float DestructionSpeed { get; set; }     // 销毁速度
         [SerializeField]private Slider creationSpeedSlider;             // 控制创建速度的拖动条 
         [SerializeField]private Slider destructionSpeedSlider;          // 控制销毁速度的拖动条
         [SerializeField]private ShapeFactory shapeFactory;              // 创建物体的工厂类
+        // 所有关卡中用到的工厂都必须在 Game 中引用。确保 Simple Shape Factory 位于数组第一个，以便旧存档能够正确加载。
+        // 像工厂的 prefab 数组一样，一旦工厂加入这个列表，就不能删除或改变顺序，否则会破坏存档兼容性。
+        [SerializeField]private ShapeFactory[] shapeFactories;          // 所有可以创建物体的工厂
         [SerializeField]private PersistentStorage storage;              // 持久化存储管理器
         [SerializeField]private KeyCode createKey = KeyCode.C;          // 创建物体的按键
         [SerializeField]private KeyCode newGameKey = KeyCode.N;         // 新游戏按键
         [SerializeField]private KeyCode saveKey = KeyCode.S;            // 保存按键
         [SerializeField]private KeyCode loadKey = KeyCode.L;            // 加载按键
         [SerializeField]private KeyCode destroyKey = KeyCode.X;         // 销毁物体按键
-        [SerializeField]private List<Shape> shapes = new List<Shape>(); // 场景中所有生成物体的引用
+        [SerializeField]private List<Shape> shapes = new();             // 场景中所有生成物体的引用
         [SerializeField]private int levelCount;                         // 总共的关卡数量
-        [SerializeField] private bool reseedOnLoad;                     // 加载时是否重新设定随机种子
+        [SerializeField]private bool reseedOnLoad;                      // 加载时是否重新设定随机种子
         
         private float creationProgress;         // 创建形状进度，满1就会执行一次创建
         private float destructionProgress;      // 销毁形状进度，满1就会执行一次销毁
         private int loadedLevelBuildIndex;      // 当前加载场景的index
         private Random.State mainRandomState;   // 主随机流状态
 
-        // private void OnEnable()
-        // {
-        //     // 为了在重编译后恢复，我们可以在 OnEnable 方法中也设置这个属性。Unity 会在组件每次被启用时调用 OnEnable
-        //     Instance = this;
-        // }
+        private void OnEnable()
+        {
+            // 每次LoadLevel的时候都会触发一次Game的OnEnable，所以在这里要加一些安全性处理
+            if (shapeFactories == null || shapeFactories.Length == 0) return;
+            // 如果为0说明已经被设置过了直接返回
+            if (shapeFactories[0].FactoryId == 0) return;
+            for (int i = 0; i < shapeFactories.Length; i++)
+            {
+                shapeFactories[i].FactoryId = i;
+            }
+        }
 
         private void Start () {
             mainRandomState = Random.state; // 这里我们保存一次随机序列，此时我们对随机序列没有做任何处理，将这个结果作为主随机序列
@@ -118,7 +126,8 @@ namespace ObjectManagement
             foreach (var obj in shapes)
             {
                 //Destroy(obj.gameObject);
-                shapeFactory.Reclaim(obj);
+                //shapeFactory.Reclaim(obj);
+                obj.Recycle();
             }
             shapes.Clear();
         }
@@ -136,6 +145,8 @@ namespace ObjectManagement
             GameLevel.Current.Save(writer);
             for (int i = 0; i < shapes.Count; i++)
             {
+                // 创建shape时第一件事就是选择工厂，所以我们在这里先记录工厂id
+                writer.Write(shapes[i].OriginFactory.FactoryId);
                 // 实际写入形状编号到存档文件里面
                 writer.Write(shapes[i].ShapeID);
                 writer.Write(shapes[i].MaterialID);
@@ -185,10 +196,11 @@ namespace ObjectManagement
             // 正式开始创建时也要先读取形状数据，如果版本号大于0，说明我们写入过形状数据，要读取一次，否则直接设置为0
             for (int i = 0; i < count; i++)
             {
+                int factoryId = version >= 5 ? reader.ReadInt() : 0;
                 int shapeID = version > 0 ? reader.ReadInt() : 0;
                 int materialID = version > 0 ? reader.ReadInt() : 0;
-                //Debug.Log($"{i}: {shapeID}");
-                Shape instance = shapeFactory.Get(shapeID, materialID);
+                Debug.Log($"{i}: {factoryId}");
+                Shape instance = shapeFactories[factoryId].Get(shapeID, materialID);
                 instance.Load(reader);
                 shapes.Add(instance);
             }
@@ -198,10 +210,9 @@ namespace ObjectManagement
 
         #region CreateShape
 
-        void CreateShape () {
-            Shape instance = shapeFactory.GetRandom();
-            GameLevel.Current.ConfigureSpawn(instance);
-            shapes.Add(instance);
+        void CreateShape ()
+        {
+            shapes.Add(GameLevel.Current.ConfigureSpawn());
         }
 
         #endregion
@@ -213,7 +224,8 @@ namespace ObjectManagement
             if (shapes.Count == 0) return;
             int index = Random.Range(0, shapes.Count);
             //Destroy(shapes[index].gameObject);
-            shapeFactory.Reclaim(shapes[index]);
+            //shapeFactory.Reclaim(shapes[index]);
+            shapes[index].Recycle();
             int lastIndex = shapes.Count - 1;
             shapes[index] = shapes[lastIndex];
             shapes.RemoveAt(lastIndex);

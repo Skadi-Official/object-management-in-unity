@@ -26,7 +26,7 @@ namespace ObjectManagement
             }
         }
 
-        [SerializeField] private bool overrideConfig;
+        [SerializeField] private bool overrideConfig;   // 由于复合生成区自己也是一个SpawnZone，可以有自己的配置
         [SerializeField] private SpawnZone[] spawnZones;
         [SerializeField] private bool sequential; // 是否启用按顺序生成
         private int nextSequentialIndex = 0;
@@ -48,11 +48,12 @@ namespace ObjectManagement
 
         #region 重写生成逻辑
 
-        public override void ConfigureSpawn(Shape shape)
+        public override Shape ConfigureSpawn()
         {
+            // 勾选overrideConfig后就不会使用自己绑定的spawnZones的生成逻辑，而是用CompositeSpawnZone自己的
             if (overrideConfig)
             {
-                base.ConfigureSpawn(shape);
+                return base.ConfigureSpawn();
             }
             else
             {
@@ -66,7 +67,7 @@ namespace ObjectManagement
                 {
                     index = Random.Range(0, spawnZones.Length);
                 }
-                spawnZones[index].ConfigureSpawn(shape);
+                return spawnZones[index].ConfigureSpawn();
             }
         }
 

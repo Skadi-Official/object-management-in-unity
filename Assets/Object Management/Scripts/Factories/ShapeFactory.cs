@@ -1,22 +1,46 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Random = UnityEngine.Random;
 
 namespace ObjectManagement
 {
     [CreateAssetMenu]
     public class ShapeFactory : ScriptableObject
     {
-        [SerializeField] private Shape[] prefabs;
-        [SerializeField] private Material[] materials;
-        [SerializeField] private bool recycle;
+        public int FactoryId
+        {
+            get => factoryId;
+            set
+            {
+                // 当id还是默认值且传入的参数不是默认值时我们才修改
+                if (factoryId == Int32.MinValue && value != Int32.MinValue)
+                {
+                    factoryId = value;
+                }
+                else
+                {
+                    Debug.LogError("工厂id已经被设置，无法再修改");
+                }
+            }
+        }
+        [SerializeField] private Shape[] prefabs;                   // 工厂能生成的预制体
+        [SerializeField] private Material[] materials;              // 用到的材质
+        [SerializeField] private bool recycle;                      // 是否开启回收（使用对象池）
+        // 如果这个id被序列化了，会在意想不到的情况下被unity保存，例如复制一份so时
+        // 如果不序列化，数据不会持久化，但也不会被错误保存。即使会在重启 Unity 或脚本重载时丢失，但这是可控的、可预测的行为。
+        [NonSerialized]  private int factoryId = Int32.MinValue;    // 工厂ID，用于存档，它只被代码控制
 
         private Scene poolScene;
         // 每个形状都要有一个池，所以我们使用一个数组存储所有的池，这个池我们用列表实现
         private List<Shape>[] pools;
 
+        /// <summary>
+        /// 创建回收所用的池，同时创建场景来把所有对象放置在单独的场景里面
+        /// </summary>
         private void CreatePools()
         {
             pools = new List<Shape>[prefabs.Length];
@@ -69,7 +93,7 @@ namespace ObjectManagement
         }
         
         /// <summary>
-        /// 生成一个指定形状与材质的物体并返回Shape
+        /// 生成一个指定形状与材质的物体并返回Shape，只有这个方法执行了实际的生成逻辑
         /// </summary>
         /// <param name="shapeID"></param>
         /// <param name="materialID"></param>
@@ -96,7 +120,9 @@ namespace ObjectManagement
                 // 否则只能再生成一个
                 else
                 {
+                    // 被创建的对象一定是当前工厂手动指定的prefab中的一个，把工厂id记录到shape中去
                     instance = Instantiate(prefabs[shapeID]);
+                    instance.OriginFactory = this;
                     instance.ShapeID = shapeID;
                     // 创建后把物体迁移到另一个场景
                     SceneManager.MoveGameObjectToScene(instance.gameObject, poolScene);
@@ -124,8 +150,19 @@ namespace ObjectManagement
             return Get(Random.Range(0, prefabs.Length), Random.Range(0, materials.Length));
         }
 
+        /// <summary>
+        /// 将传入的形状关闭或者销毁
+        /// </summary>
+        /// <param name="shapeToRecycle"></param>
         public void Reclaim(Shape shapeToRecycle)
         {
+            if (shapeToRecycle.OriginFactory != this)
+            {
+                Debug.LogError("当前被调用的工厂回收方法不是创建当前Shape的工厂");
+                return;
+            }
+            // 如果启用了回收，关闭物体并将其添加到池中表示可以被使用
+            // 否则直接销毁
             if (recycle)
             {
                 if(pools == null) CreatePools();
