@@ -15,7 +15,7 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 5; // 存档版本标记
+        const int saveVersion = 6; // 存档版本标记
         //public static Game Instance { get; private set; } 由于我们把生成点全部解耦到了关卡自己，game只需要去获取，不需要关卡来设置game的生成点变量
         public float CreationSpeed { get; set; }        // 创建速度
         public float DestructionSpeed { get; set; }     // 销毁速度
@@ -176,7 +176,7 @@ namespace ObjectManagement
             if (version >= 3)
             {
                 Random.State state = reader.ReadRandomState();
-                Debug.Log($"Load::{JsonUtility.ToJson(Random.state)}");
+                //Debug.Log($"Load::{JsonUtility.ToJson(Random.state)}");
                 if (!reseedOnLoad)
                 {
                     Random.state = state;
@@ -199,7 +199,7 @@ namespace ObjectManagement
                 int factoryId = version >= 5 ? reader.ReadInt() : 0;
                 int shapeID = version > 0 ? reader.ReadInt() : 0;
                 int materialID = version > 0 ? reader.ReadInt() : 0;
-                Debug.Log($"{i}: {factoryId}");
+                //Debug.Log($"{i}: {factoryId}");
                 Shape instance = shapeFactories[factoryId].Get(shapeID, materialID);
                 instance.Load(reader);
                 shapes.Add(instance);

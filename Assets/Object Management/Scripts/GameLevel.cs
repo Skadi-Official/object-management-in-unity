@@ -41,7 +41,7 @@ namespace ObjectManagement
         /// <param name="shape"></param>
         public Shape ConfigureSpawn()
         {
-            return spawnZone.ConfigureSpawn();
+            return spawnZone.SpawnShape();
         }
         
         #region 重写存读档

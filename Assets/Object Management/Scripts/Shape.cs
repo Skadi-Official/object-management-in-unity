@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using ObjectManagement;
 using UnityEngine;
 
 namespace ObjectManagement
@@ -19,8 +17,8 @@ namespace ObjectManagement
         static MaterialPropertyBlock sharedPropertyBlock;
 
         public int MaterialID { get;private set; }      // 记录当前shape所使用的material
-        public Vector3 AngularVelocity { get; set; }    // 角速度
-        public Vector3 Velocity { get; set; }           // 移动速度
+        //public Vector3 AngularVelocity { get; set; }    // 角速度
+        //public Vector3 Velocity { get; set; }           // 移动速度
         public int ShapeID
         {
             get => shapeID;
@@ -57,7 +55,7 @@ namespace ObjectManagement
         private ShapeFactory originFactory;
         private int shapeID = Int32.MinValue;                   // 记录形状种类
         private Color[] colors;                                 // 同一个shape的不同物体可能有不同的颜色
-
+        private List<ShapeBehavior> behaviorList = new();       // 存储当前shape所有的行为   
         private void Awake()
         {
             colors = new Color[meshRenderers.Length];
@@ -69,10 +67,13 @@ namespace ObjectManagement
         /// </summary>
         public void GameUpdate()
         {
-            // 这里的Rotate用法，实际上是把Vector3的三个数据当作在xyz轴上分别旋转的角度应用到物体上
-            transform.Rotate(AngularVelocity * Time.deltaTime);
-            transform.localPosition += Velocity * Time.deltaTime;
+            for (int i = 0; i < behaviorList.Count; i++)
+            {
+                behaviorList[i].GameUpdate(this);
+            }
         }
+
+        #region 设置材质与颜色
 
         public void SetMaterial(Material material, int materialID)
         {
@@ -124,6 +125,10 @@ namespace ObjectManagement
             meshRenderers[index].SetPropertyBlock(sharedPropertyBlock);
         }
 
+        #endregion
+
+        #region 存档与读档
+
         public override void Save(GameDataWriter writer)
         {
             base.Save(writer);
@@ -133,8 +138,16 @@ namespace ObjectManagement
                 writer.Write(colors[i]);
                 //Debug.Log($"{colors[i]}");
             }
-            writer.Write(AngularVelocity);
-            writer.Write(Velocity);
+            // writer.Write(AngularVelocity);
+            // writer.Write(Velocity);
+            writer.Write(behaviorList.Count);
+            //Debug.Log($"behaviorList.Count::{behaviorList.Count}");
+            foreach (var behavior in behaviorList)
+            {
+                //Debug.Log($"BehaviorType::{(int)behavior.BehaviorType}");
+                writer.Write((int)behavior.BehaviorType);
+                behavior.Save(writer);
+            }
         }
 
         public override void Load(GameDataReader reader)
@@ -148,9 +161,27 @@ namespace ObjectManagement
             {
                 SetColor(reader.Version > 0 ? reader.ReadColor() : Color.white);
             }
-            AngularVelocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
-            Velocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
+            // AngularVelocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
+            // Velocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
+            if (reader.Version >= 6)
+            {
+                int behaviorCount = reader.ReadInt();
+                //Debug.Log($"behaviorCount::{behaviorCount}");
+                for (int i = 0; i < behaviorCount; i++)
+                {
+                    var type = (ShapeBehaviorType)reader.ReadInt();
+                    //Debug.Log($"type::{type}");
+                    AddBehavior(type).Load(reader);
+                }
+            }
+            else if (reader.Version >= 4)
+            {
+                AddBehavior<RotationShapeBehavior>().AngularVelocity = reader.ReadVector3();
+                AddBehavior<MovementShapeBehavior>().Velocity = reader.ReadVector3();
+            }
         }
+
+        #endregion
 
         #region 加载颜色
 
@@ -186,15 +217,48 @@ namespace ObjectManagement
 
         #endregion
 
+        #region Behavior相关
+
+        /// <summary>
+        /// 添加一个新的行为到behaviorList中
+        /// </summary>
+        // 访问级别 返回类型 方法名<T>(参数列表)
+        public T AddBehavior<T>() where T : ShapeBehavior
+        {
+            T behavior = gameObject.AddComponent<T>();
+            behaviorList.Add(behavior);
+            return behavior;
+        }
+
+        private ShapeBehavior AddBehavior(ShapeBehaviorType type)
+        {
+            switch (type)
+            {
+                case ShapeBehaviorType.Movement:
+                    return AddBehavior<MovementShapeBehavior>();
+                case ShapeBehaviorType.Rotation:
+                    return AddBehavior<RotationShapeBehavior>();
+            }
+            Debug.LogError("当前参数没有设置对应的返回行为类型");
+            return null;
+        }
+
+        #endregion
+        
         public void Recycle()
         {
+            for (int i = 0; i < behaviorList.Count; i++)
+            {
+                Destroy(behaviorList[i]);
+            }
+            behaviorList.Clear();
             OriginFactory.Reclaim(this);
         }
         
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.cyan;
-            Gizmos.DrawRay(transform.position, Velocity);
+            //Gizmos.DrawRay(transform.position, behaviorList[]);
         }
     }
 }

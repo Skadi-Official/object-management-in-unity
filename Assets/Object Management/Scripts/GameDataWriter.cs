@@ -79,7 +79,7 @@ namespace ObjectManagement
         /// </summary>
         public void Write(Random.State value)
         {
-            Debug.Log($"Write:: {JsonUtility.ToJson(value)}");
+            //Debug.Log($"Write:: {JsonUtility.ToJson(value)}");
             writer.Write(JsonUtility.ToJson(value));
         }
 

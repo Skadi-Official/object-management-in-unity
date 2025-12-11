@@ -60,7 +60,7 @@ namespace ObjectManagement
         /// 可以被重写的具体生成逻辑，会返回一个Shape
         /// </summary>
         /// <returns></returns>
-        public virtual Shape ConfigureSpawn()
+        public virtual Shape SpawnShape()
         {
             int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
             Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
@@ -79,8 +79,12 @@ namespace ObjectManagement
                     shape.SetColor(spawnConfig.color.RandomInRange, i);
                 }
             }
-            
-            shape.AngularVelocity = Vector3.one * spawnConfig.angularSpeed.RandomValueInRange;
+            float angularSpeed = spawnConfig.angularSpeed.RandomValueInRange;
+            if (angularSpeed != 0f) // 如果随机出来的结果是0的话就不需要再去添加组件了
+            {
+                var rotation = shape.AddBehavior<RotationShapeBehavior>();
+                rotation.AngularVelocity = Random.onUnitSphere * angularSpeed;
+            }
             // switch表达式的写法，本质上和传统case break没有区别，下划线表示default值
             Vector3 direction = spawnConfig.movementDirection switch
             {
@@ -91,7 +95,12 @@ namespace ObjectManagement
                 SpawnConfiguration.MovementDirection.Random => Random.onUnitSphere,
                 _ => Vector3.forward
             };
-            shape.Velocity = direction * spawnConfig.spawnSpeed.RandomValueInRange;
+            float speed = spawnConfig.spawnSpeed.RandomValueInRange;
+            if (speed != 0) // 如果随机出来的结果是0的话就不需要再去添加组件了
+            {
+                var movement = shape.AddBehavior<MovementShapeBehavior>();
+                movement.Velocity = direction * speed;
+            }
             return shape;
         }
     }

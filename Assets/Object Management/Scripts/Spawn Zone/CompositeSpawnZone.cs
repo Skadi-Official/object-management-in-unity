@@ -48,12 +48,12 @@ namespace ObjectManagement
 
         #region 重写生成逻辑
 
-        public override Shape ConfigureSpawn()
+        public override Shape SpawnShape()
         {
             // 勾选overrideConfig后就不会使用自己绑定的spawnZones的生成逻辑，而是用CompositeSpawnZone自己的
             if (overrideConfig)
             {
-                return base.ConfigureSpawn();
+                return base.SpawnShape();
             }
             else
             {
@@ -67,7 +67,7 @@ namespace ObjectManagement
                 {
                     index = Random.Range(0, spawnZones.Length);
                 }
-                return spawnZones[index].ConfigureSpawn();
+                return spawnZones[index].SpawnShape();
             }
         }
 
