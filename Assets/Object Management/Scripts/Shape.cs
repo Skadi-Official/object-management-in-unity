@@ -51,11 +51,12 @@ namespace ObjectManagement
                 }
             }
         }
+        public float Age{ get; private set;}
         [SerializeField] private MeshRenderer[] meshRenderers;  // 每个物体的meshRender
         private ShapeFactory originFactory;
         private int shapeID = Int32.MinValue;                   // 记录形状种类
         private Color[] colors;                                 // 同一个shape的不同物体可能有不同的颜色
-        private List<ShapeBehavior> behaviorList = new();       // 存储当前shape所有的行为   
+        private List<ShapeBehavior> behaviorList = new();       // 存储当前shape所有的行为
         private void Awake()
         {
             colors = new Color[meshRenderers.Length];
@@ -67,6 +68,7 @@ namespace ObjectManagement
         /// </summary>
         public void GameUpdate()
         {
+            Age += Time.deltaTime;
             for (int i = 0; i < behaviorList.Count; i++)
             {
                 behaviorList[i].GameUpdate(this);
@@ -140,6 +142,7 @@ namespace ObjectManagement
             }
             // writer.Write(AngularVelocity);
             // writer.Write(Velocity);
+            writer.Write(Age);
             writer.Write(behaviorList.Count);
             //Debug.Log($"behaviorList.Count::{behaviorList.Count}");
             foreach (var behavior in behaviorList)
@@ -165,13 +168,15 @@ namespace ObjectManagement
             // Velocity = reader.Version >= 4 ? reader.ReadVector3() : Vector3.zero;
             if (reader.Version >= 6)
             {
+                Age = reader.ReadFloat();
                 int behaviorCount = reader.ReadInt();
                 //Debug.Log($"behaviorCount::{behaviorCount}");
                 for (int i = 0; i < behaviorCount; i++)
                 {
-                    var type = (ShapeBehaviorType)reader.ReadInt();
+                    var behavior = ((ShapeBehaviorType)reader.ReadInt()).GetInstance();
                     //Debug.Log($"type::{type}");
-                    AddBehavior(type).Load(reader);
+                    behaviorList.Add(behavior);
+                    behavior.Load(reader);
                 }
             }
             else if (reader.Version >= 4)
@@ -223,33 +228,24 @@ namespace ObjectManagement
         /// 添加一个新的行为到behaviorList中
         /// </summary>
         // 访问级别 返回类型 方法名<T>(参数列表)
-        public T AddBehavior<T>() where T : ShapeBehavior
+        public T AddBehavior<T>() where T : ShapeBehavior, new()
         {
-            T behavior = gameObject.AddComponent<T>();
+            // 添加的时候要从池中去取而不是手动new
+            T behavior = ShapeBehaviorPool<T>.Get();
             behaviorList.Add(behavior);
             return behavior;
-        }
-
-        private ShapeBehavior AddBehavior(ShapeBehaviorType type)
-        {
-            switch (type)
-            {
-                case ShapeBehaviorType.Movement:
-                    return AddBehavior<MovementShapeBehavior>();
-                case ShapeBehaviorType.Rotation:
-                    return AddBehavior<RotationShapeBehavior>();
-            }
-            Debug.LogError("当前参数没有设置对应的返回行为类型");
-            return null;
         }
 
         #endregion
         
         public void Recycle()
         {
+            Age = 0f;
             for (int i = 0; i < behaviorList.Count; i++)
             {
-                Destroy(behaviorList[i]);
+                //Destroy(behaviorList[i]);
+                // 不是统一销毁而是让每个行为自己执行自己重写的回收逻辑
+                behaviorList[i].Recycle();
             }
             behaviorList.Clear();
             OriginFactory.Reclaim(this);

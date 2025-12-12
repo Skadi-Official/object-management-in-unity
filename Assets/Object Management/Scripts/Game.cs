@@ -50,6 +50,9 @@ namespace ObjectManagement
             {
                 shapeFactories[i].FactoryId = i;
             }
+
+            int num = 5;
+            num.ExtendMethodToInt();
         }
 
         private void Start () {

@@ -3,9 +3,9 @@ using UnityEngine;
 namespace ObjectManagement
 {
     /// <summary>
-    /// 按照指定Vector3进行旋转的简单行为
+    /// 按照指定Vector3进行旋转的简单行为，不可被继承
     /// </summary>
-    public class RotationShapeBehavior : ShapeBehavior
+    public sealed class RotationShapeBehavior : ShapeBehavior
     {
         public override ShapeBehaviorType BehaviorType => ShapeBehaviorType.Rotation;
         public Vector3 AngularVelocity { get; set; }
@@ -24,6 +24,11 @@ namespace ObjectManagement
         {
             AngularVelocity = reader.ReadVector3();
             //Debug.Log($"RotationShapeBehavior Load::{AngularVelocity}");
+        }
+
+        public override void Recycle()
+        {
+            ShapeBehaviorPool<RotationShapeBehavior>.Reclaim(this);
         }
     }
 }

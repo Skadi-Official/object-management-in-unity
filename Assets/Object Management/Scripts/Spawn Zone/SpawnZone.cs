@@ -50,12 +50,21 @@ namespace ObjectManagement
             public ColorRangeHSV color;
             // 是否使用统一的颜色
             public bool uniformColor;
+            // 震荡方向
+            public MovementDirection oscillationDirection;
+            // 震荡幅度
+            public FloatRange oscillationAmplitude;
+            // 震荡频率
+            public FloatRange oscillationFrequency;
         }
         [SerializeField] private SpawnConfiguration spawnConfig;
         /// <summary>
         /// 提供给子类重写的抽象生成点
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
+
+        #region 生成shape
+
         /// <summary>
         /// 可以被重写的具体生成逻辑，会返回一个Shape
         /// </summary>
@@ -86,22 +95,62 @@ namespace ObjectManagement
                 rotation.AngularVelocity = Random.onUnitSphere * angularSpeed;
             }
             // switch表达式的写法，本质上和传统case break没有区别，下划线表示default值
-            Vector3 direction = spawnConfig.movementDirection switch
-            {
-                SpawnConfiguration.MovementDirection.Forward => transform.forward,
-                SpawnConfiguration.MovementDirection.Upward => transform.up,
-                SpawnConfiguration.MovementDirection.Outward =>
-                    (t.localPosition - transform.position).normalized,
-                SpawnConfiguration.MovementDirection.Random => Random.onUnitSphere,
-                _ => Vector3.forward
-            };
+            Vector3 direction = GetDirectionVector(spawnConfig.movementDirection, t);
             float speed = spawnConfig.spawnSpeed.RandomValueInRange;
             if (speed != 0) // 如果随机出来的结果是0的话就不需要再去添加组件了
             {
                 var movement = shape.AddBehavior<MovementShapeBehavior>();
                 movement.Velocity = direction * speed;
             }
+            SetupOscillation(shape);
             return shape;
         }
+
+        #endregion
+
+        #region 移动方向获取
+
+        /// <summary>
+        /// 返回一个方向矢量，由传入参数决定
+        /// </summary>
+        /// <param name="direction">所有可能的移动方向</param>
+        /// <param name="t">方向矢量的原点物体</param>
+        /// <returns></returns>
+        private Vector3 GetDirectionVector(SpawnConfiguration.MovementDirection direction, Transform t)
+        {
+            switch (direction)
+            {
+                case SpawnConfiguration.MovementDirection.Forward:
+                    return t.forward;
+                case SpawnConfiguration.MovementDirection.Upward:
+                    return t.up;
+                case SpawnConfiguration.MovementDirection.Outward:
+                    return (t.localPosition - transform.position).normalized;
+                case SpawnConfiguration.MovementDirection.Random:
+                    return Random.onUnitSphere;
+                default:
+                    return t.forward;
+            }
+        }
+
+        #endregion
+
+        #region 添加震荡行为
+
+        /// <summary>
+        /// 根据配置参数设置震荡行为
+        /// </summary>
+        /// <param name="shape"></param>
+        private void SetupOscillation(Shape shape)
+        {
+            float amplitude = spawnConfig.oscillationAmplitude.RandomValueInRange;
+            float frequency = spawnConfig.oscillationFrequency.RandomValueInRange;
+            if (frequency == 0 || amplitude == 0f) return;
+            var oscillation = shape.AddBehavior<OscillationShapeBehavior>();
+            oscillation.Offset = GetDirectionVector(spawnConfig.oscillationDirection, shape.transform) * amplitude;
+            oscillation.Frequency = frequency;
+        }
+
+        #endregion
     }
 }

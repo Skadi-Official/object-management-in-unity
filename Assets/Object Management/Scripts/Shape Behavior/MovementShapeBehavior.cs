@@ -3,9 +3,9 @@ using UnityEngine;
 namespace ObjectManagement
 {
     /// <summary>
-    /// 按照固定方向和速度进行线性移动的简单行为
+    /// 按照固定方向和速度进行线性移动的简单行为，不可被继承
     /// </summary>
-    public class MovementShapeBehavior : ShapeBehavior
+    public sealed class MovementShapeBehavior : ShapeBehavior
     {
         public override ShapeBehaviorType BehaviorType => ShapeBehaviorType.Movement;
         public Vector3 Velocity { get; set; }
@@ -25,6 +25,11 @@ namespace ObjectManagement
         {
             Velocity = reader.ReadVector3();
             //Debug.Log($"MovementShapeBehavior Load::{Velocity}");
+        }
+
+        public override void Recycle()
+        {
+            ShapeBehaviorPool<MovementShapeBehavior>.Reclaim(this);
         }
     }
 }
