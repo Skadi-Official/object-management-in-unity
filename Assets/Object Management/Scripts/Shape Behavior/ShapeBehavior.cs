@@ -35,7 +35,7 @@ namespace ObjectManagement
         /// 在Update中需要执行的逻辑
         /// </summary>
         /// <param name="shape"></param>
-        public abstract void GameUpdate(Shape shape);
+        public abstract bool GameUpdate(Shape shape);
         
         /// <summary>
         /// 存档时需要执行的逻辑

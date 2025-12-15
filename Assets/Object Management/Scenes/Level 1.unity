@@ -215,10 +215,11 @@ MonoBehaviour:
   spawnConfig:
     factories:
     - {fileID: 11400000, guid: 234ab098b3f32f545a5975756e009806, type: 2}
+    - {fileID: 11400000, guid: c9ab07ffbfcb20e449981937d61a639a, type: 2}
     movementDirection: 2
     spawnSpeed:
       min: 0
-      max: 0
+      max: 1
     angularSpeed:
       min: 0
       max: 180
@@ -238,11 +239,21 @@ MonoBehaviour:
     uniformColor: 0
     oscillationDirection: 2
     oscillationAmplitude:
-      min: 0.1
-      max: 1
+      min: 0
+      max: 0
     oscillationFrequency:
-      min: 1
-      max: 1
+      min: 0
+      max: 0
+    Satellite:
+      relativeScale:
+        min: 0.25
+        max: 0.5
+      orbitRadius:
+        min: 1
+        max: 2
+      orbitFrequency:
+        min: 0.25
+        max: 0.5
   surfaceOnly: 1
 --- !u!1 &1618201011
 GameObject:

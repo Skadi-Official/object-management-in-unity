@@ -56,6 +56,20 @@ namespace ObjectManagement
             public FloatRange oscillationAmplitude;
             // 震荡频率
             public FloatRange oscillationFrequency;
+            // 卫星配置
+            [Serializable]
+            public struct SatelliteConfiguration
+            {
+                [FloatRangeSlider(0f, 1f)]
+                // 相对于焦点形状的缩放
+                public FloatRange relativeScale;
+                // 卫星的轨道半径
+                public FloatRange orbitRadius;
+                // 卫星的环绕频率
+                public FloatRange orbitFrequency;
+            }
+
+            public SatelliteConfiguration Satellite;
         }
         [SerializeField] private SpawnConfiguration spawnConfig;
         /// <summary>
@@ -63,13 +77,13 @@ namespace ObjectManagement
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
 
-        #region 生成shape
+        #region 生成shape或者satellite
 
         /// <summary>
         /// 可以被重写的具体生成逻辑，会返回一个Shape
         /// </summary>
         /// <returns></returns>
-        public virtual Shape SpawnShape()
+        public virtual void SpawnShapes()
         {
             int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
             Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
@@ -77,17 +91,7 @@ namespace ObjectManagement
             t.localPosition = SpawnPoint; // Game -> GameLevel -> SpawnZone(abstract) -> SpawnZone(override)
             t.localRotation = Random.rotation;
             t.localScale = Vector3.one * spawnConfig.scale.RandomValueInRange;
-            if (spawnConfig.uniformColor)
-            {
-                shape.SetColor(spawnConfig.color.RandomInRange);    
-            }
-            else
-            {
-                for (int i = 0; i < shape.ColorCount; i++)
-                {
-                    shape.SetColor(spawnConfig.color.RandomInRange, i);
-                }
-            }
+            SetupColor(shape);
             float angularSpeed = spawnConfig.angularSpeed.RandomValueInRange;
             if (angularSpeed != 0f) // 如果随机出来的结果是0的话就不需要再去添加组件了
             {
@@ -102,12 +106,53 @@ namespace ObjectManagement
                 var movement = shape.AddBehavior<MovementShapeBehavior>();
                 movement.Velocity = direction * speed;
             }
+            // 生成时都需要尝试设置震荡行为，如果参数为零就不会实际设置
             SetupOscillation(shape);
-            return shape;
+            
+            CreateSatelliteFor(shape);
+            //return shape;
+        }
+
+        /// <summary>
+        /// 为指定shape创建一个卫星
+        /// </summary>
+        /// <param name="focalShape">被卫星环绕的物体</param>
+        public void CreateSatelliteFor(Shape focalShape)
+        {
+            int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
+            Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
+            Transform t = shape.transform;
+            t.localRotation = Random.rotation;
+            t.localScale = focalShape.transform.localScale * 
+                           spawnConfig.Satellite.relativeScale.RandomValueInRange;
+            SetupColor(shape);
+            shape.AddBehavior<SatelliteShapeBehavior>().Initialize(
+                shape, focalShape, 
+                spawnConfig.Satellite.orbitRadius.RandomValueInRange,
+                spawnConfig.Satellite.orbitFrequency.RandomValueInRange);
+        }
+        
+        #endregion
+
+        #region 设置颜色
+
+        private void SetupColor(Shape shape)
+        {
+            if (spawnConfig.uniformColor)
+            {
+                shape.SetColor(spawnConfig.color.RandomInRange);    
+            }
+            else
+            {
+                for (int i = 0; i < shape.ColorCount; i++)
+                {
+                    shape.SetColor(spawnConfig.color.RandomInRange, i);
+                }
+            }
         }
 
         #endregion
-
+        
         #region 移动方向获取
 
         /// <summary>

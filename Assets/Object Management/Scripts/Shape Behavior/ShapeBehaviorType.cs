@@ -9,7 +9,8 @@ namespace ObjectManagement
     {
         Movement,           // 简单线性移动
         Rotation,           // 简单单向旋转
-        Oscillation         // 来回震动
+        Oscillation,        // 来回震动
+        Satellite           // 环绕指定目标旋转
     }
 
     public static class ShapeBehaviorTypeMethods
@@ -24,6 +25,8 @@ namespace ObjectManagement
                     return ShapeBehaviorPool<RotationShapeBehavior>.Get();
                 case ShapeBehaviorType.Oscillation:
                     return ShapeBehaviorPool<OscillationShapeBehavior>.Get();
+                case ShapeBehaviorType.Satellite:
+                    return ShapeBehaviorPool<SatelliteShapeBehavior>.Get();
             }
             Debug.Log($"未实现或设置该行为模式对应的脚本");
             return null;

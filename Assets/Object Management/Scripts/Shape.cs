@@ -51,7 +51,8 @@ namespace ObjectManagement
                 }
             }
         }
-        public float Age{ get; private set;}
+        public float Age{ get; private set;}                    // shape从被启用到现在过了多久，秒为单位
+        public int InstanceId { get; private set; }             // 用来记录形状的唯一id
         [SerializeField] private MeshRenderer[] meshRenderers;  // 每个物体的meshRender
         private ShapeFactory originFactory;
         private int shapeID = Int32.MinValue;                   // 记录形状种类
@@ -71,7 +72,11 @@ namespace ObjectManagement
             Age += Time.deltaTime;
             for (int i = 0; i < behaviorList.Count; i++)
             {
-                behaviorList[i].GameUpdate(this);
+                if (!behaviorList[i].GameUpdate(this))
+                {
+                    behaviorList[i].Recycle();
+                    behaviorList.RemoveAt(i--);
+                }
             }
         }
 
@@ -241,6 +246,7 @@ namespace ObjectManagement
         public void Recycle()
         {
             Age = 0f;
+            InstanceId += 1;
             for (int i = 0; i < behaviorList.Count; i++)
             {
                 //Destroy(behaviorList[i]);
@@ -248,13 +254,21 @@ namespace ObjectManagement
                 behaviorList[i].Recycle();
             }
             behaviorList.Clear();
-            OriginFactory.Reclaim(this);
+            OriginFactory.Reclaim(this);  
         }
         
         private void OnDrawGizmos()
         {
-            Gizmos.color = Color.cyan;
-            //Gizmos.DrawRay(transform.position, behaviorList[]);
+            foreach (var behavior in behaviorList)
+            {
+                if (behavior is SatelliteShapeBehavior satellite)
+                {
+                    Gizmos.color = Color.green;
+                    Vector3 center = satellite.focalShape.Shape.transform.position; // 世界坐标
+                    Vector3 axis = satellite.orbitAxis;
+                    Gizmos.DrawLine(center - axis, center + axis);
+                }
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ namespace ObjectManagement
     public class Game : PersistableObject 
     {
         const int saveVersion = 6; // 存档版本标记
-        //public static Game Instance { get; private set; } 由于我们把生成点全部解耦到了关卡自己，game只需要去获取，不需要关卡来设置game的生成点变量
+        public static Game Instance { get; private set; }
         public float CreationSpeed { get; set; }        // 创建速度
         public float DestructionSpeed { get; set; }     // 销毁速度
         [SerializeField]private Slider creationSpeedSlider;             // 控制创建速度的拖动条 
@@ -44,6 +44,7 @@ namespace ObjectManagement
         {
             // 每次LoadLevel的时候都会触发一次Game的OnEnable，所以在这里要加一些安全性处理
             if (shapeFactories == null || shapeFactories.Length == 0) return;
+            Instance = this;
             // 如果为0说明已经被设置过了直接返回
             if (shapeFactories[0].FactoryId == 0) return;
             for (int i = 0; i < shapeFactories.Length; i++)
@@ -92,7 +93,7 @@ namespace ObjectManagement
             while (creationProgress >= 1f)
             {
                 creationProgress -= 1f;
-                CreateShape();
+                GameLevel.Current.ConfigureSpawn();
             }
             while (destructionProgress >= 1f)
             {
@@ -205,20 +206,20 @@ namespace ObjectManagement
                 //Debug.Log($"{i}: {factoryId}");
                 Shape instance = shapeFactories[factoryId].Get(shapeID, materialID);
                 instance.Load(reader);
-                shapes.Add(instance);
+                //shapes.Add(instance); 我们将添加到shapes的逻辑迁移到了工厂的Get方法中
             }
         }
         
         #endregion
 
-        #region CreateShape
-
-        void CreateShape ()
-        {
-            shapes.Add(GameLevel.Current.ConfigureSpawn());
-        }
-
-        #endregion
+        // #region CreateShape
+        //
+        // void CreateShape ()
+        // {
+        //     shapes.Add(GameLevel.Current.ConfigureSpawn());
+        // }
+        //
+        // #endregion
         
         #region DestroyShape
 
@@ -269,7 +270,7 @@ namespace ObjectManagement
         {
             if (Input.GetKeyDown(createKey))
             {
-                CreateShape();
+                GameLevel.Current.ConfigureSpawn();
             }
             else if (Input.GetKeyDown(newGameKey))
             {
@@ -299,6 +300,15 @@ namespace ObjectManagement
                     }
                 }
             }
+        }
+
+        #endregion
+
+        #region 向shape列表里添加shape
+
+        public void AddShape(Shape shape)
+        {
+            shapes.Add(shape);
         }
 
         #endregion

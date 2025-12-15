@@ -137,6 +137,7 @@ namespace ObjectManagement
                 SceneManager.MoveGameObjectToScene(instance.gameObject, poolScene);
             }
             instance.SetMaterial(materials[materialID], materialID);
+            Game.Instance.AddShape(instance);
             return instance;
         }
 

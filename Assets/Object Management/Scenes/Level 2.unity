@@ -169,7 +169,7 @@ MonoBehaviour:
   spawnConfig:
     factories:
     - {fileID: 11400000, guid: c9ab07ffbfcb20e449981937d61a639a, type: 2}
-    movementDirection: 0
+    movementDirection: 1
     spawnSpeed:
       min: 1
       max: 2
@@ -190,6 +190,13 @@ MonoBehaviour:
         min: 0
         max: 1
     uniformColor: 1
+    oscillationDirection: 0
+    oscillationAmplitude:
+      min: 0
+      max: 0
+    oscillationFrequency:
+      min: 0
+      max: 0
   surfaceOnly: 1
 --- !u!1 &611823980
 GameObject:
