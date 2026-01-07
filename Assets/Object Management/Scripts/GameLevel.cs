@@ -15,6 +15,10 @@ namespace ObjectManagement
     {
         // 当前激活的关卡实例（全局唯一）
         public static GameLevel Current { get; private set; }
+        // 数量限制
+        public int PopulationLimit => populationLimit;
+        
+        [SerializeField] private int populationLimit;
         
         // 关卡内部使用的生成区域
         [SerializeField] private SpawnZone spawnZone;

@@ -53,5 +53,9 @@ namespace ObjectManagement
         /// 回收行为对象需要执行的逻辑
         /// </summary>
         public abstract void Recycle();
+        /// <summary>
+        /// 将shape持有的SaveIndex解析成instanceID，需要子类手动实现
+        /// </summary>
+        public virtual void ResolveShapeInstances() { }
     }
 }

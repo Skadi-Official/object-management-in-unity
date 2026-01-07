@@ -96,5 +96,9 @@ namespace ObjectManagement
         }
 
         #endregion
+        public ShapeInstance ReadShapeInstance()
+        {
+            return new ShapeInstance(reader.ReadInt32());
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
@@ -60,6 +61,8 @@ namespace ObjectManagement
             [Serializable]
             public struct SatelliteConfiguration
             {
+                // 卫星的随机数量范围
+                public IntRange amount;
                 [FloatRangeSlider(0f, 1f)]
                 // 相对于焦点形状的缩放
                 public FloatRange relativeScale;
@@ -108,8 +111,13 @@ namespace ObjectManagement
             }
             // 生成时都需要尝试设置震荡行为，如果参数为零就不会实际设置
             SetupOscillation(shape);
-            
-            CreateSatelliteFor(shape);
+
+            int satelliteCount = spawnConfig.Satellite.amount.RandomValueInRange;
+
+            for (int i = 0; i < satelliteCount; i++)
+            {
+                CreateSatelliteFor(shape);
+            }
             //return shape;
         }
 

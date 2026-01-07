@@ -7,8 +7,8 @@ namespace ObjectManagement
     /// 自定义在 Inspector 中绘制 FloatRange（min/max）的方式。
     /// 默认 FloatRange 会被拆成两个 float 字段，但我们让它们并排显示。
     /// </summary>
-    [CustomPropertyDrawer(typeof(FloatRange))]
-    public class FloatRangeDrawer : PropertyDrawer
+    [CustomPropertyDrawer(typeof(FloatRange)), CustomPropertyDrawer(typeof(IntRange))]
+    public class FloatOrIntRangeDrawer : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {

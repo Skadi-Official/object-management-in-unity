@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85437f0cc60a20148af6087009946628, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  populationLimit: 20
   spawnZone: {fileID: 549849942}
   persistableObjects: []
 --- !u!4 &263794253
@@ -245,6 +246,9 @@ MonoBehaviour:
       min: 0
       max: 0
     Satellite:
+      amount:
+        min: 0
+        max: 3
       relativeScale:
         min: 0.25
         max: 0.5

@@ -52,6 +52,10 @@ namespace ObjectManagement
             }
         }
         public float Age{ get; private set;}                    // shape从被启用到现在过了多久，秒为单位
+        /// <summary>
+        /// 当前shape在shape列表中的唯一索引
+        /// </summary>
+        public int SaveIndex { get; set; }
         public int InstanceId { get; private set; }             // 用来记录形状的唯一id
         [SerializeField] private MeshRenderer[] meshRenderers;  // 每个物体的meshRender
         private ShapeFactory originFactory;
@@ -242,6 +246,14 @@ namespace ObjectManagement
         }
 
         #endregion
+
+        public void ResolveShapeInstance()
+        {
+            foreach (ShapeBehavior behavior in behaviorList)
+            {
+                behavior.ResolveShapeInstances();
+            }
+        }
         
         public void Recycle()
         {

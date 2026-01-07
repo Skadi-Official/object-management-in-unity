@@ -84,5 +84,10 @@ namespace ObjectManagement
         }
 
         #endregion
+
+        public void Write(ShapeInstance value)
+        {
+            writer.Write(value.IsValid ? value.Shape.SaveIndex : -1);
+        }
     }
 }

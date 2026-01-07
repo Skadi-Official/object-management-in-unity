@@ -107,6 +107,14 @@ namespace ObjectManagement
             {
                 shapes[i].GameUpdate();
             }
+
+            if (GameLevel.Current.PopulationLimit > 0)
+            {
+                while (shapes.Count > GameLevel.Current.PopulationLimit)
+                {
+                    DestroyShape();
+                }
+            }
         }
 
         private void BeginNewGame()
@@ -208,6 +216,11 @@ namespace ObjectManagement
                 instance.Load(reader);
                 //shapes.Add(instance); 我们将添加到shapes的逻辑迁移到了工厂的Get方法中
             }
+
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                shapes[i].ResolveShapeInstance();
+            }
         }
         
         #endregion
@@ -231,6 +244,7 @@ namespace ObjectManagement
             //shapeFactory.Reclaim(shapes[index]);
             shapes[index].Recycle();
             int lastIndex = shapes.Count - 1;
+            shapes[lastIndex].SaveIndex = index;
             shapes[index] = shapes[lastIndex];
             shapes.RemoveAt(lastIndex);
         }
@@ -308,9 +322,20 @@ namespace ObjectManagement
 
         public void AddShape(Shape shape)
         {
+            shape.SaveIndex = shapes.Count;
             shapes.Add(shape);
         }
 
         #endregion
+
+        /// <summary>
+        /// 返回指定索引所指向的shape
+        /// </summary>
+        /// <param name="index">shape在列表中的索引</param>
+        /// <returns></returns>
+        public Shape GetShape(int index)
+        {
+            return shapes[index];
+        }
     }
 }

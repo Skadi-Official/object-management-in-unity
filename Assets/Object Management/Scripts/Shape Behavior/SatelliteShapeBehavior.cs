@@ -10,14 +10,22 @@ namespace ObjectManagement
         public float frequency;
         public Vector3 cosOffset, sinOffset;
         public Vector3 orbitAxis;
+        public Vector3 previousPosition;    // 上一帧的位置
         #endregion
         public override ShapeBehaviorType BehaviorType => ShapeBehaviorType.Satellite;
         public override bool GameUpdate(Shape shape)
         {
-            if (!focalShape.IsValid) return false;
+            // 如果焦点不存在，我们用上一帧的位置和当前位置算出一个速度并施加一个移动行为来模拟甩出去的行为
+            if (!focalShape.IsValid)
+            {
+                shape.AddBehavior<MovementShapeBehavior>().Velocity =
+                    (shape.transform.localPosition - previousPosition) / Time.deltaTime;
+                return false;
+            }
             // 这里使用2f * Mathf.PI是为了保证frequency参数的物理意义，即一秒转几圈
             // 2f * Mathf.PI：用弧度表示的数值，frequency * shape.Age是圈/秒 * 秒 => 即2pi * 圈数
             float t = 2f * Mathf.PI * frequency * shape.Age;
+            previousPosition = shape.transform.localPosition;
             var currentFocalPos = focalShape.Shape.transform.localPosition;
             var newPosX = cosOffset * Mathf.Cos(t);
             var newPosZ = sinOffset * Mathf.Sin(t);
@@ -27,12 +35,21 @@ namespace ObjectManagement
 
         public override void Save(GameDataWriter writer)
         {
-            throw new System.NotImplementedException();
+            writer.Write(focalShape);
+            writer.Write(frequency);
+            writer.Write(cosOffset);
+            writer.Write(sinOffset);
+            writer.Write(previousPosition);
         }
 
         public override void Load(GameDataReader reader)
         {
-            throw new System.NotImplementedException();
+            focalShape = reader.ReadShapeInstance();
+            frequency = reader.ReadFloat();
+            cosOffset = reader.ReadVector3();
+            sinOffset = reader.ReadVector3();
+            previousPosition = reader.ReadVector3();
+            //Debug.Log($"SatelliteShapeBehavior Load::{frequency} {cosOffset} {sinOffset} {previousPosition}");
         }
 
         public override void Recycle()
@@ -69,8 +86,15 @@ namespace ObjectManagement
             // 为了确保卫星在生成时就处于正确的位置，需要在 Initialize 的末尾手动调用一次 GameUpdate。
             // 因为在形状被生成的同一帧内，GameUpdate 不会被自动调用。
             GameUpdate(shape);
+            // 初始化的时候也需要设置位置
+            previousPosition = shape.transform.localPosition;
         }
 
         #endregion
+
+        public override void ResolveShapeInstances()
+        {
+            focalShape.Resolve();
+        }
     }
 }
