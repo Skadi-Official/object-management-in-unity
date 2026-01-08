@@ -31,7 +31,8 @@ namespace ObjectManagement
         [SerializeField]private KeyCode saveKey = KeyCode.S;            // 保存按键
         [SerializeField]private KeyCode loadKey = KeyCode.L;            // 加载按键
         [SerializeField]private KeyCode destroyKey = KeyCode.X;         // 销毁物体按键
-        [SerializeField]private List<Shape> shapes = new();             // 场景中所有生成物体的引用
+        [SerializeField]private List<Shape> shapes;                     // 场景中所有生成物体的引用
+        [SerializeField]private List<ShapeInstance> killList;           // 需要被移除的物体
         [SerializeField]private int levelCount;                         // 总共的关卡数量
         [SerializeField]private bool reseedOnLoad;                      // 加载时是否重新设定随机种子
         
@@ -39,6 +40,7 @@ namespace ObjectManagement
         private float destructionProgress;      // 销毁形状进度，满1就会执行一次销毁
         private int loadedLevelBuildIndex;      // 当前加载场景的index
         private Random.State mainRandomState;   // 主随机流状态
+        private bool inGameLoop;                // 为了确保每一个shape都一定会被更新，需要知道当前更新状态
 
         private void OnEnable()
         {
@@ -60,7 +62,7 @@ namespace ObjectManagement
             mainRandomState = Random.state; // 这里我们保存一次随机序列，此时我们对随机序列没有做任何处理，将这个结果作为主随机序列
             //Debug.Log($"Start::{JsonUtility.ToJson(mainRandomState)}");
             shapes = new List<Shape>();
-
+            killList = new List<ShapeInstance>();
             if (Application.isEditor)
             {
                 // 防止重复加载场景，如果已经加载了，直接将其激活并返回
@@ -86,6 +88,7 @@ namespace ObjectManagement
 
         private void FixedUpdate()
         {
+            inGameLoop = true;
             #region CreateAndDestroyShape
 
             creationProgress += Time.deltaTime * CreationSpeed;
@@ -115,6 +118,17 @@ namespace ObjectManagement
                     DestroyShape();
                 }
             }
+            inGameLoop = false;
+            // 执行到这里说明形状的更新逻辑已经全部完成了，可以开始执行回收逻辑
+            if (killList.Count <= 0) return;
+            for (int i = 0; i < killList.Count; i++)
+            {
+                if (killList[i].IsValid)
+                {
+                    KillImmediately(killList[i].Shape);
+                }
+            }
+            killList.Clear();
         }
 
         private void BeginNewGame()
@@ -239,14 +253,8 @@ namespace ObjectManagement
         private void DestroyShape()
         {
             if (shapes.Count == 0) return;
-            int index = Random.Range(0, shapes.Count);
-            //Destroy(shapes[index].gameObject);
-            //shapeFactory.Reclaim(shapes[index]);
-            shapes[index].Recycle();
-            int lastIndex = shapes.Count - 1;
-            shapes[lastIndex].SaveIndex = index;
-            shapes[index] = shapes[lastIndex];
-            shapes.RemoveAt(lastIndex);
+            Shape shape = shapes[Random.Range(0, shapes.Count)];
+            KillImmediately(shape);
         }
 
         #endregion
@@ -328,6 +336,32 @@ namespace ObjectManagement
 
         #endregion
 
+        #region KillShape
+
+        public void Kill(Shape shape)
+        {
+            if (inGameLoop)
+            {
+                killList.Add(shape);
+            }
+            else
+            {
+                KillImmediately(shape);
+            }
+        }
+
+        private void KillImmediately(Shape shape)
+        {
+            int index = shape.SaveIndex;
+            int laseIndex = shapes.Count - 1;
+            shape.Recycle();
+            shapes[laseIndex].SaveIndex = index;
+            shapes[index] = shapes[laseIndex];
+            shapes.RemoveAt(laseIndex);
+        }
+        
+        #endregion
+        
         /// <summary>
         /// 返回指定索引所指向的shape
         /// </summary>

@@ -32,7 +32,7 @@ namespace ObjectManagement
         public abstract ShapeBehaviorType BehaviorType { get; }
         
         /// <summary>
-        /// 在Update中需要执行的逻辑
+        /// 在Update中需要执行的逻辑，shape.cs中当子类重写的gameUpdate返回false时，这个行为就会被自动移除
         /// </summary>
         /// <param name="shape"></param>
         public abstract bool GameUpdate(Shape shape);

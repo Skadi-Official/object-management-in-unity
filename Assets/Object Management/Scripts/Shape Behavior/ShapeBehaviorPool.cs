@@ -5,10 +5,10 @@ using UnityEngine;
 namespace ObjectManagement
 {
     /// <summary>
-    /// 泛型的行为对象池，每个行为类都会有自己的池来进行放入和取出
+    /// 泛型的行为对象池，每个行为类都会有自己的池来进行放入和取出，将会在第一次被使用时由CLR自动构造
     /// </summary>
     /// <typeparam name="T">必须继承ShapeBehavior</typeparam>
-    public static class ShapeBehaviorPool<T> where T : ShapeBehavior, new() 
+    public static class ShapeBehaviorPool<T> where T : ShapeBehavior, new()
     {
         private static Stack<T> stack = new Stack<T>();
         /// <summary>

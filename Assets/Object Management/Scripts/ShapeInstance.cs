@@ -38,6 +38,7 @@ namespace ObjectManagement
         // ShapeInstance instance = new ShapeInstance(shape);
         // 而加了implicit后我们可以直接写ShapeInstance instance = shape; 编译器会自动帮我们翻译
         // 如果我们用的是explicit，就必须写ShapeInstance instance = (ShapeInstance)shape;
+        // Shape 可以被当成 ShapeInstance 使用
         public static implicit operator ShapeInstance(Shape shape)
         {
             return new ShapeInstance(shape);

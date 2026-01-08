@@ -247,6 +247,14 @@ namespace ObjectManagement
 
         #endregion
 
+        /// <summary>
+        /// 回收掉调用此方法的shape
+        /// </summary>
+        public void Die()
+        {
+            Game.Instance.Kill(this);
+        }
+
         public void ResolveShapeInstance()
         {
             foreach (ShapeBehavior behavior in behaviorList)

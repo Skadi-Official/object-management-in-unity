@@ -10,7 +10,10 @@ namespace ObjectManagement
         Movement,           // 简单线性移动
         Rotation,           // 简单单向旋转
         Oscillation,        // 来回震动
-        Satellite           // 环绕指定目标旋转
+        Satellite,          // 环绕指定目标旋转
+        Growing,            // 渐进式长大
+        LifeCycle,          // 生长期之后死亡期之前的成体期
+        Dying               // 逐渐缩小死亡
     }
 
     public static class ShapeBehaviorTypeMethods
@@ -27,8 +30,12 @@ namespace ObjectManagement
                     return ShapeBehaviorPool<OscillationShapeBehavior>.Get();
                 case ShapeBehaviorType.Satellite:
                     return ShapeBehaviorPool<SatelliteShapeBehavior>.Get();
+                case ShapeBehaviorType.Growing:
+                    return ShapeBehaviorPool<GrowingShapeBehavior>.Get();
+                case ShapeBehaviorType.Dying:
+                    return ShapeBehaviorPool<DyingShapeBehavior>.Get();
             }
-            Debug.Log($"未实现或设置该行为模式对应的脚本");
+            Debug.LogError($"未实现或设置该行为模式对应的脚本");
             return null;
         }
     }

@@ -73,6 +73,21 @@ namespace ObjectManagement
             }
 
             public SatelliteConfiguration Satellite;
+            
+            [Serializable]
+            public struct LifecycleConfiguration
+            {
+                [FloatRangeSlider(0f, 2f)] public FloatRange growingDuration;
+                [FloatRangeSlider(0f, 100f)] public FloatRange adultDuration;
+                [FloatRangeSlider(0f, 2f)] public FloatRange dyingDuration;
+
+                public Vector3 RandomDurations =>
+                    new(growingDuration.RandomValueInRange,
+                        adultDuration.RandomValueInRange,
+                        dyingDuration.RandomValueInRange);
+            }
+
+            public LifecycleConfiguration lifecycle;
         }
         [SerializeField] private SpawnConfiguration spawnConfig;
         /// <summary>
@@ -113,19 +128,21 @@ namespace ObjectManagement
             SetupOscillation(shape);
 
             int satelliteCount = spawnConfig.Satellite.amount.RandomValueInRange;
-
+            Vector3 lifecycleDurations = spawnConfig.lifecycle.RandomDurations;
             for (int i = 0; i < satelliteCount; i++)
             {
-                CreateSatelliteFor(shape);
+                CreateSatelliteFor(shape, lifecycleDurations);
             }
+            // 给卫星添加了生长也需要给自身添加这个行为
+            SetupLifecycle(shape, lifecycleDurations);
             //return shape;
         }
 
         /// <summary>
-        /// 为指定shape创建一个卫星
+        /// 为指定shape创建一个卫星，更新后卫星也应该有生长行为
         /// </summary>
         /// <param name="focalShape">被卫星环绕的物体</param>
-        public void CreateSatelliteFor(Shape focalShape)
+        public void CreateSatelliteFor(Shape focalShape, Vector3 lifecycleDurations)
         {
             int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
             Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
@@ -138,6 +155,8 @@ namespace ObjectManagement
                 shape, focalShape, 
                 spawnConfig.Satellite.orbitRadius.RandomValueInRange,
                 spawnConfig.Satellite.orbitFrequency.RandomValueInRange);
+            
+            SetupLifecycle(shape, lifecycleDurations);
         }
         
         #endregion
@@ -202,6 +221,41 @@ namespace ObjectManagement
             var oscillation = shape.AddBehavior<OscillationShapeBehavior>();
             oscillation.Offset = GetDirectionVector(spawnConfig.oscillationDirection, shape.transform) * amplitude;
             oscillation.Frequency = frequency;
+        }
+
+        #endregion
+
+        #region 添加生长行为
+
+        private void SetupLifecycle(Shape shape, Vector3 durations)
+        {
+            if (durations.x > 0f) 
+            {
+                if (durations.y > 0f || durations.z > 0f)
+                {
+                    shape.AddBehavior<LifecycleShapeBehavior>().Initialize(
+                        shape, durations.x, durations.y, durations.z
+                    );
+                }
+                else 
+                {
+                    shape.AddBehavior<GrowingShapeBehavior>().Initialize(
+                        shape, durations.x
+                    );
+                }
+            }
+            else if (durations.y > 0f) 
+            {
+                shape.AddBehavior<LifecycleShapeBehavior>().Initialize(
+                    shape, durations.x, durations.y, durations.z
+                );
+            }
+            else if (durations.z > 0f) 
+            {
+                shape.AddBehavior<DyingShapeBehavior>().Initialize(
+                    shape, durations.z
+                );
+            }
         }
 
         #endregion
