@@ -92,6 +92,12 @@ namespace ObjectManagement
         private void FixedUpdate()
         {
             inGameLoop = true;
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                shapes[i].GameUpdate();
+            }
+            inGameLoop = false;
+            // 执行到这里说明形状的更新逻辑已经全部完成了，可以开始执行回收逻辑
             #region CreateAndDestroyShape
 
             creationProgress += Time.deltaTime * CreationSpeed;
@@ -108,12 +114,7 @@ namespace ObjectManagement
             }
 
             #endregion
-
-            for (int i = 0; i < shapes.Count; i++)
-            {
-                shapes[i].GameUpdate();
-            }
-
+            
             if (GameLevel.Current.PopulationLimit > 0)
             {
                 // 这里不能把被标记成需要销毁的shape算进去
@@ -122,8 +123,7 @@ namespace ObjectManagement
                     DestroyShape();
                 }
             }
-            inGameLoop = false;
-            // 执行到这里说明形状的更新逻辑已经全部完成了，可以开始执行回收逻辑
+            
             if (killList.Count <= 0) return;
             for (int i = 0; i < killList.Count; i++)
             {
