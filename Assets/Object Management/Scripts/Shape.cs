@@ -57,6 +57,11 @@ namespace ObjectManagement
         /// </summary>
         public int SaveIndex { get; set; }
         public int InstanceId { get; private set; }             // 用来记录形状的唯一id
+
+        /// <summary>
+        /// 指示该形状是否已被标记为“即将消亡”
+        /// </summary>
+        public bool IsMarkedAsDying => Game.Instance.IsMarkedDying(this);
         [SerializeField] private MeshRenderer[] meshRenderers;  // 每个物体的meshRender
         private ShapeFactory originFactory;
         private int shapeID = Int32.MinValue;                   // 记录形状种类
@@ -247,6 +252,8 @@ namespace ObjectManagement
 
         #endregion
 
+        #region shape生命周期逻辑相关
+
         /// <summary>
         /// 回收掉调用此方法的shape
         /// </summary>
@@ -266,6 +273,12 @@ namespace ObjectManagement
         public void Recycle()
         {
             Age = 0f;
+            /*这里的+=1是为了区分逻辑实例与内存对象
+            对象池中，`Shape` 的 C# 对象（内存）是不会被销毁的，而是会被重复利用 
+            但是当我们进入这个方法时，我们实际希望做的事是让形状的生命周期结束
+            这个时候外部还持有对这个shape的引用，还是同一个内存地址的对象，但我已经不再是之前的那个 ID 了
+            并且外部的shapeInstance的isValid属性会进行校验，从而知道引用是否失效*/ 
+
             InstanceId += 1;
             for (int i = 0; i < behaviorList.Count; i++)
             {
@@ -276,6 +289,17 @@ namespace ObjectManagement
             behaviorList.Clear();
             OriginFactory.Reclaim(this);  
         }
+
+        /// <summary>
+        /// 调用Game单例中的MarkAsDying，将当前shape标记为需要被销毁
+        /// </summary>
+        public void MarkAsDying()
+        {
+            Game.Instance.MarkAsDying(this);
+        }
+
+        #endregion
+        
         
         private void OnDrawGizmos()
         {

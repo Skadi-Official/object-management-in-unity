@@ -1104,6 +1104,7 @@ MonoBehaviour:
   shapes: []
   levelCount: 4
   reseedOnLoad: 0
+  destroyDuration: 1
 --- !u!4 &1364196932
 Transform:
   m_ObjectHideFlags: 0

@@ -28,7 +28,6 @@ namespace ObjectManagement
             shape.transform.localScale = s * originalScale;
             return true;
          }
-         Debug.Log("shape.transform.localScale = originalScale;");
          shape.transform.localScale = originalScale;
          return false;
       }

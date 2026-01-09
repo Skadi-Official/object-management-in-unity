@@ -32,16 +32,18 @@ namespace ObjectManagement
         [SerializeField]private KeyCode loadKey = KeyCode.L;            // 加载按键
         [SerializeField]private KeyCode destroyKey = KeyCode.X;         // 销毁物体按键
         [SerializeField]private List<Shape> shapes;                     // 场景中所有生成物体的引用
-        [SerializeField]private List<ShapeInstance> killList;           // 需要被移除的物体
         [SerializeField]private int levelCount;                         // 总共的关卡数量
         [SerializeField]private bool reseedOnLoad;                      // 加载时是否重新设定随机种子
+        [SerializeField]private float destroyDuration;                  // 随机销毁形状时的死亡过程时间
         
-        private float creationProgress;         // 创建形状进度，满1就会执行一次创建
-        private float destructionProgress;      // 销毁形状进度，满1就会执行一次销毁
-        private int loadedLevelBuildIndex;      // 当前加载场景的index
-        private Random.State mainRandomState;   // 主随机流状态
-        private bool inGameLoop;                // 为了确保每一个shape都一定会被更新，需要知道当前更新状态
-
+        private float creationProgress;                     // 创建形状进度，满1就会执行一次创建
+        private float destructionProgress;                  // 销毁形状进度，满1就会执行一次销毁
+        private int loadedLevelBuildIndex;                  // 当前加载场景的index
+        private Random.State mainRandomState;               // 主随机流状态
+        private bool inGameLoop;                            // 为了确保每一个shape都一定会被更新，需要知道当前更新状态
+        private int dyingShapeCount;                        // 被标记为正在死亡的形状数量与形状列表中死亡部分的长度
+        private List<ShapeInstance> killList;               // 需要被移除的物体
+        private List<ShapeInstance> markAsDyingList;        // 暂存需要被标记为 dying 的形状
         private void OnEnable()
         {
             // 每次LoadLevel的时候都会触发一次Game的OnEnable，所以在这里要加一些安全性处理
@@ -63,6 +65,7 @@ namespace ObjectManagement
             //Debug.Log($"Start::{JsonUtility.ToJson(mainRandomState)}");
             shapes = new List<Shape>();
             killList = new List<ShapeInstance>();
+            markAsDyingList = new List<ShapeInstance>();
             if (Application.isEditor)
             {
                 // 防止重复加载场景，如果已经加载了，直接将其激活并返回
@@ -113,7 +116,8 @@ namespace ObjectManagement
 
             if (GameLevel.Current.PopulationLimit > 0)
             {
-                while (shapes.Count > GameLevel.Current.PopulationLimit)
+                // 这里不能把被标记成需要销毁的shape算进去
+                while (shapes.Count - dyingShapeCount> GameLevel.Current.PopulationLimit)
                 {
                     DestroyShape();
                 }
@@ -129,6 +133,18 @@ namespace ObjectManagement
                 }
             }
             killList.Clear();
+            
+            // 把列表里面所有shape立刻标记为需要被销毁
+            // 我们这样做的目的是防止在游戏循环执行的过程中修改shape列表
+            if(markAsDyingList.Count <= 0) return;
+            foreach (var shapeInstance in markAsDyingList)
+            {
+                if (shapeInstance.IsValid)
+                {
+                    MarkAsDyingImmediately(shapeInstance.Shape);
+                }
+            }
+            markAsDyingList.Clear();
         }
 
         private void BeginNewGame()
@@ -147,6 +163,7 @@ namespace ObjectManagement
             creationProgress = 0;
             destructionSpeedSlider.value = DestructionSpeed = 0;
             destructionProgress = 0;
+            dyingShapeCount = 0;
             if (shapes == null) return;
 
             foreach (var obj in shapes)
@@ -250,11 +267,22 @@ namespace ObjectManagement
         
         #region DestroyShape
 
+        /// <summary>
+        /// 随机销毁一个形状
+        /// </summary>
         private void DestroyShape()
         {
             if (shapes.Count == 0) return;
-            Shape shape = shapes[Random.Range(0, shapes.Count)];
-            KillImmediately(shape);
+            if (shapes.Count - dyingShapeCount <= 0) return;
+            Shape shape = shapes[Random.Range(dyingShapeCount, shapes.Count)];
+            if (destroyDuration <= 0f)
+            {
+                KillImmediately(shape);
+            }
+            else
+            {
+                shape.AddBehavior<DyingShapeBehavior>().Initialize(shape, destroyDuration);
+            }
         }
 
         #endregion
@@ -336,7 +364,7 @@ namespace ObjectManagement
 
         #endregion
 
-        #region KillShape
+        #region Kill shape and Mark shape as dying
 
         public void Kill(Shape shape)
         {
@@ -355,9 +383,64 @@ namespace ObjectManagement
             int index = shape.SaveIndex;
             int laseIndex = shapes.Count - 1;
             shape.Recycle();
-            shapes[laseIndex].SaveIndex = index;
-            shapes[index] = shapes[laseIndex];
+            
+            // 当需要被移除的是一个dying shape，它在dying区域内并且不是dying区域的最后一个
+            if (index < dyingShapeCount && index < --dyingShapeCount)
+            {
+                // 那么我们需要先把他移动到dying区域的最后一个位置
+                shapes[dyingShapeCount].SaveIndex = index;
+                shapes[index] = shapes[dyingShapeCount];
+                index = dyingShapeCount;
+            }
+ 
+            if (index < laseIndex)
+            {
+                shapes[laseIndex].SaveIndex = index;
+                shapes[index] = shapes[laseIndex];
+            }
             shapes.RemoveAt(laseIndex);
+        }
+
+        private void MarkAsDyingImmediately(Shape shape)
+        {
+            // 取得该 shape 当前在 shapes 列表中的索引
+            int index = shape.SaveIndex;
+            // 如果 index 小于 dyingShapeCount，说明这个 shape 已经在“正在死亡”的区间里了
+            if (index < dyingShapeCount) return;
+            // 将“死亡区第一个位置”的 shape 的 SaveIndex
+            // 改成即将被交换走的 index
+            // （因为它马上会被挪到 index 位置）
+            shapes[dyingShapeCount].SaveIndex = index;
+            // 把当前死亡区起始位置的 shape
+            // 移动到原本 shape 所在的位置
+            shapes[index] = shapes[dyingShapeCount];
+            // 把当前 shape 的 SaveIndex
+            // 更新为它即将进入的死亡区位置
+            shape.SaveIndex = dyingShapeCount;
+            // 把 shape 本身放进 dyingShapeCount 位置
+            shapes[dyingShapeCount++] = shape;
+        }
+
+        public void MarkAsDying(Shape shape)
+        {
+            if (inGameLoop)
+            {
+                markAsDyingList.Add(shape);
+            }
+            else
+            {
+                MarkAsDyingImmediately(shape);
+            }
+        }
+
+        /// <summary>
+        /// shape是否已经被标记为dying
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <returns></returns>
+        public bool IsMarkedDying(Shape shape)
+        {
+            return shape.SaveIndex < dyingShapeCount;
         }
         
         #endregion

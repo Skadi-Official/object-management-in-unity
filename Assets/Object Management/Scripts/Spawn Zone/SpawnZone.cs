@@ -70,17 +70,22 @@ namespace ObjectManagement
                 public FloatRange orbitRadius;
                 // 卫星的环绕频率
                 public FloatRange orbitFrequency;
+                // 卫星的生命周期是否要和主体保持一致，值为true时保持一致
+                public bool uniformLifecycles;
             }
 
             public SatelliteConfiguration Satellite;
             
             [Serializable]
+            // 生命周期配置
             public struct LifecycleConfiguration
             {
+                // 成长期时间
                 [FloatRangeSlider(0f, 2f)] public FloatRange growingDuration;
+                // 成年期时间
                 [FloatRangeSlider(0f, 100f)] public FloatRange adultDuration;
+                // 死亡期持续时间，不是开始死亡的时间，开始死亡时间由生长和成年期持续时间决定
                 [FloatRangeSlider(0f, 2f)] public FloatRange dyingDuration;
-
                 public Vector3 RandomDurations =>
                     new(growingDuration.RandomValueInRange,
                         adultDuration.RandomValueInRange,
@@ -131,7 +136,9 @@ namespace ObjectManagement
             Vector3 lifecycleDurations = spawnConfig.lifecycle.RandomDurations;
             for (int i = 0; i < satelliteCount; i++)
             {
-                CreateSatelliteFor(shape, lifecycleDurations);
+                CreateSatelliteFor(shape,
+                    spawnConfig.Satellite.uniformLifecycles ?
+                    lifecycleDurations : spawnConfig.lifecycle.RandomDurations);
             }
             // 给卫星添加了生长也需要给自身添加这个行为
             SetupLifecycle(shape, lifecycleDurations);
@@ -227,35 +234,61 @@ namespace ObjectManagement
 
         #region 添加生长行为
 
+        /// <summary>
+        /// 根据生长 / 成熟 / 死亡三个阶段的持续时间，
+        /// 决定给 Shape 挂哪些生命周期相关的 Behavior。
+        /// 
+        /// durations.x -> 生长时间（Growing）
+        /// durations.y -> 成熟时间（Adult）
+        /// durations.z -> 死亡时间（Dying）
+        /// </summary>
         private void SetupLifecycle(Shape shape, Vector3 durations)
         {
+            // ====== 情况一：存在生长阶段 ======
             if (durations.x > 0f) 
             {
+                // 如果生长之后还有成熟阶段 或 死亡阶段，
+                // 说明这是一个“多阶段生命周期”，需要 LifecycleBehavior 来调度
                 if (durations.y > 0f || durations.z > 0f)
                 {
+                    // LifecycleBehavior 会：
+                    // 1. 立刻添加 GrowingBehavior
+                    // 2. 在合适时间进入 DyingBehavior
                     shape.AddBehavior<LifecycleShapeBehavior>().Initialize(
                         shape, durations.x, durations.y, durations.z
                     );
                 }
                 else 
                 {
+                    // 只有生长阶段，生长完成后一直存活
+                    // 不存在阶段切换，直接使用 GrowingBehavior 即可
                     shape.AddBehavior<GrowingShapeBehavior>().Initialize(
                         shape, durations.x
                     );
                 }
             }
+            // ====== 情况二：没有生长，但有成熟阶段 ======
             else if (durations.y > 0f) 
             {
+                // Shape 一开始就是完整状态
+                // 经过一段成熟期后进入死亡阶段
+                // 仍然存在阶段切换，因此使用 LifecycleBehavior
                 shape.AddBehavior<LifecycleShapeBehavior>().Initialize(
                     shape, durations.x, durations.y, durations.z
                 );
             }
+            // ====== 情况三：只有死亡阶段 ======
             else if (durations.z > 0f) 
             {
+                // Shape 立刻开始死亡，不需要任何阶段调度
+                // 直接使用 DyingBehavior，避免 LifecycleBehavior 的额外开销
                 shape.AddBehavior<DyingShapeBehavior>().Initialize(
                     shape, durations.z
                 );
             }
+            // ====== 情况四：三个阶段全为 0 ======
+            // 什么都不做：
+            // Shape 立即出现、永久存活、也不会死亡
         }
 
         #endregion

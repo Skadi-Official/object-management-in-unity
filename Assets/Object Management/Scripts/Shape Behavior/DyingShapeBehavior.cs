@@ -14,6 +14,7 @@ namespace ObjectManagement
             originalScale = shape.transform.localScale;
             this.duration = duration;
             dyingAge = shape.Age;
+            shape.MarkAsDying();
         }
         
         public override bool GameUpdate(Shape shape)

@@ -34,6 +34,8 @@ namespace ObjectManagement
                     return ShapeBehaviorPool<GrowingShapeBehavior>.Get();
                 case ShapeBehaviorType.Dying:
                     return ShapeBehaviorPool<DyingShapeBehavior>.Get();
+                case ShapeBehaviorType.LifeCycle:
+                    return ShapeBehaviorPool<LifecycleShapeBehavior>.Get();
             }
             Debug.LogError($"未实现或设置该行为模式对应的脚本");
             return null;
