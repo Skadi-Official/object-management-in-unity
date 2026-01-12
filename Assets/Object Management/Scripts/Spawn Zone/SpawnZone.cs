@@ -95,10 +95,22 @@ namespace ObjectManagement
             public LifecycleConfiguration lifecycle;
         }
         [SerializeField] private SpawnConfiguration spawnConfig;
+        [SerializeField, Range(0f, 50f)] private float spawnSpeed;
+        private float spawnProgress;
         /// <summary>
         /// 提供给子类重写的抽象生成点
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
+
+        private void FixedUpdate()
+        {
+            spawnProgress += Time.deltaTime * spawnSpeed;
+            while (spawnProgress >= 1f)
+            {
+                spawnProgress -= 1f;
+                SpawnShapes();
+            }
+        }
 
         #region 生成shape或者satellite
 
@@ -289,6 +301,20 @@ namespace ObjectManagement
             // ====== 情况四：三个阶段全为 0 ======
             // 什么都不做：
             // Shape 立即出现、永久存活、也不会死亡
+        }
+
+        #endregion
+
+        #region 存读档逻辑相关
+
+        public override void Save(GameDataWriter writer)
+        {
+            writer.Write(spawnProgress);
+        }
+
+        public override void Load(GameDataReader reader)
+        {
+            spawnProgress = reader.ReadFloat();
         }
 
         #endregion

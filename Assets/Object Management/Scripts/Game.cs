@@ -15,7 +15,7 @@ namespace ObjectManagement
     /// </summary>
     public class Game : PersistableObject 
     {
-        const int saveVersion = 6; // 存档版本标记
+        const int saveVersion = 7; // 存档版本标记
         public static Game Instance { get; private set; }
         public float CreationSpeed { get; set; }        // 创建速度
         public float DestructionSpeed { get; set; }     // 销毁速度
@@ -120,6 +120,7 @@ namespace ObjectManagement
                 // 这里不能把被标记成需要销毁的shape算进去
                 while (shapes.Count - dyingShapeCount> GameLevel.Current.PopulationLimit)
                 {
+                    Debug.Log("销毁多余shape");
                     DestroyShape();
                 }
             }

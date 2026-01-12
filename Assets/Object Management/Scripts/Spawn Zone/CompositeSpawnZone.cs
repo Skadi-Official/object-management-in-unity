@@ -35,12 +35,17 @@ namespace ObjectManagement
         
         public override void Save(GameDataWriter writer)
         {
+            base.Save(writer);
             // 保存时同时记录顺序
             writer.Write(nextSequentialIndex);
         }
         
         public override void Load(GameDataReader reader)
         {
+            if (reader.Version > 7)
+            {
+                base.Load(reader);
+            }
             nextSequentialIndex = reader.ReadInt();
         }
         
