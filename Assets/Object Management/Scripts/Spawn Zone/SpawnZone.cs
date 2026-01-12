@@ -122,6 +122,7 @@ namespace ObjectManagement
         {
             int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
             Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
+            shape.gameObject.layer = gameObject.layer;
             Transform t = shape.transform;
             t.localPosition = SpawnPoint; // Game -> GameLevel -> SpawnZone(abstract) -> SpawnZone(override)
             t.localRotation = Random.rotation;
@@ -165,6 +166,7 @@ namespace ObjectManagement
         {
             int factoryIndex = Random.Range(0, spawnConfig.factories.Length);
             Shape shape = spawnConfig.factories[factoryIndex].GetRandom();
+            shape.gameObject.layer = gameObject.layer;
             Transform t = shape.transform;
             t.localRotation = Random.rotation;
             t.localScale = focalShape.transform.localScale * 
