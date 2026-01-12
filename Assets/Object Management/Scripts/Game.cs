@@ -96,6 +96,7 @@ namespace ObjectManagement
             {
                 shapes[i].GameUpdate();
             }
+            GameLevel.Current.GameUpdate();
             inGameLoop = false;
             // 执行到这里说明形状的更新逻辑已经全部完成了，可以开始执行回收逻辑
             #region CreateAndDestroyShape

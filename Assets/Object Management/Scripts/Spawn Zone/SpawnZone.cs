@@ -25,7 +25,7 @@ namespace ObjectManagement
     /// 策略模式（Strategy）：
     ///     不同 SpawnZone 子类 = 不同的“生成策略”
     /// </summary>
-    public abstract class SpawnZone : PersistableObject
+    public abstract class SpawnZone : GameLevelObject
     {
         [Serializable]
         public struct SpawnConfiguration
@@ -101,8 +101,9 @@ namespace ObjectManagement
         /// 提供给子类重写的抽象生成点
         /// </summary>
         public abstract Vector3 SpawnPoint { get; }
+        #region 更新逻辑
 
-        private void FixedUpdate()
+        public override void GameUpdate()
         {
             spawnProgress += Time.deltaTime * spawnSpeed;
             while (spawnProgress >= 1f)
@@ -111,6 +112,8 @@ namespace ObjectManagement
                 SpawnShapes();
             }
         }
+
+        #endregion
 
         #region 生成shape或者satellite
 

@@ -1,5 +1,7 @@
 using System;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ObjectManagement
 {
@@ -11,7 +13,7 @@ namespace ObjectManagement
     /// 解耦 Game 与 SpawnZone，避免 Game 直接依赖关卡内部结构  
     /// 为后续“关卡状态的持久化保存”提供结构基础  
     /// </summary>
-    public class GameLevel : PersistableObject
+    public partial class GameLevel : PersistableObject
     {
         // 当前激活的关卡实例（全局唯一）
         public static GameLevel Current { get; private set; }
@@ -24,18 +26,19 @@ namespace ObjectManagement
         [SerializeField] private SpawnZone spawnZone;
 
         // 每个关卡脚本都持有这个关卡下所有需要被持久化保存的对象的引用
-        [SerializeField] private PersistableObject[] persistableObjects;
+        [FormerlySerializedAs("persistableObjects")]
+        [SerializeField] private GameLevelObject[] levelObjects;
         
         // 当关卡启用时，自动注册为当前关卡
         private void OnEnable()
         {
             Current = this;
             // 由于对象引用数组可能是为空的，所以在OnEnable里面我们加一层判断
-            if (persistableObjects == null)
+            if (levelObjects == null)
             {
                 // persistableObjects = new PersistableObject[0];
                 // 使用 'Array.Empty<PersistableObject>()' 以避免数组分配
-                persistableObjects = Array.Empty<PersistableObject>();
+                levelObjects = Array.Empty<GameLevelObject>();
             }
         }
 
@@ -47,16 +50,28 @@ namespace ObjectManagement
         {
             spawnZone.SpawnShapes();
         }
+
+        #region 更新逻辑
+
+        public void GameUpdate()
+        {
+            foreach (var levelObject in levelObjects)
+            {
+                levelObject.GameUpdate();
+            }
+        }
+
+        #endregion
         
         #region 重写存读档
 
         // 对于关卡本身，我们需要记录关卡持有的所有需要被持久化保存的物体的数量，并调用这些物体自己的Save方法
         public override void Save(GameDataWriter writer)
         {
-            writer.Write(persistableObjects.Length);
-            for (int i = 0; i < persistableObjects.Length; i++)
+            writer.Write(levelObjects.Length);
+            for (int i = 0; i < levelObjects.Length; i++)
             {
-                persistableObjects[i].Save(writer);
+                levelObjects[i].Save(writer);
             }
         }
 
@@ -65,7 +80,7 @@ namespace ObjectManagement
             int savedCount = reader.ReadInt();
             for (int i = 0; i < savedCount; i++)
             {
-                persistableObjects[i].Load(reader);
+                levelObjects[i].Load(reader);
             }
         }
 

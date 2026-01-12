@@ -300,7 +300,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   populationLimit: 20
   spawnZone: {fileID: 549849942}
-  persistableObjects: []
+  levelObjects:
+  - {fileID: 549849942}
 --- !u!4 &263794253
 Transform:
   m_ObjectHideFlags: 0
